@@ -50,14 +50,25 @@ class Template
 	{
 		$code = $this->DOM->saveHTML(); // todo: this adds <p> wrapper for text without elements
 
+		if( $code === false )
+		{
+			throw new \Exception( 'saveHTML call failed' ); // todo: better message
+		}
+
 		echo '[2] ' . $code . PHP_EOL;
 
 		// todo: a way to do this without replaces?
 		$code = preg_replace_callback(
 			'/<PHPEXPRESSION c="([0-9]+)">/s',
-			fn( array $matches ) : string => $this->expressions[ $matches[1] ],
+			fn( array $matches ) : string => $this->expressions[ (int)$matches[ 1 ] ],
 			$code
 		);
+
+		if( $code === null )
+		{
+			throw new \Exception( 'preg_replace_callback call failed' ); // todo: better message
+		}
+
 		$code = str_replace( '</PHPEXPRESSION>', '<?php }?>', $code );
 		$code = str_replace( '?><?php', '', $code );
 
@@ -74,12 +85,17 @@ class Template
 				continue;
 			}
 
+			if( !( $node instanceof \DOMElement ) )
+			{
+				continue;
+			}
+
 			// todo: check for duplicate attributes
 			// todo: check whether an `if` is open when handling `else`
 			// todo: check whether if/else is within the same parent node
 			if( $node->hasAttribute( 'v-if' ) )
 			{
-				$this->expression = $node->getAttribute( 'v-if' );
+				$expression = $node->getAttribute( 'v-if' );
 				$node->removeAttribute( 'v-if' );
 
 				$newNode = $this->DOM->createElement( 'PHPEXPRESSION' );
@@ -87,12 +103,12 @@ class Template
 				$parentNode->replaceChild( $newNode, $node );
 				$newNode->appendChild( $node );
 
-				$this->expressions[ $this->expressionCount ] = "<?php if({$this->expression}){ ?>";
+				$this->expressions[ $this->expressionCount ] = "<?php if({$expression}){ ?>";
 				$this->expressionCount++;
 			}
 			else if( $node->hasAttribute( 'v-else-if' ) )
 			{
-				$this->expression = $node->getAttribute( 'v-else-if' );
+				$expression = $node->getAttribute( 'v-else-if' );
 				$node->removeAttribute( 'v-else-if' );
 
 				$newNode = $this->DOM->createElement( 'PHPEXPRESSION' );
@@ -100,7 +116,7 @@ class Template
 				$parentNode->replaceChild( $newNode, $node );
 				$newNode->appendChild( $node );
 
-				$this->expressions[ $this->expressionCount ] = "<?php elseif({$this->expression}){ ?>";
+				$this->expressions[ $this->expressionCount ] = "<?php elseif({$expression}){ ?>";
 				$this->expressionCount++;
 			}
 			else if( $node->hasAttribute( 'v-else' ) )
@@ -170,6 +186,11 @@ class Template
 
 		$newNode = $this->DOM->createElement( 'PHPEXPRESSION' );
 		$newNode->setAttribute( 'c', (string)$this->expressionCount );
+
+		if( $mustache->parentNode === null )
+		{
+			throw new \Exception( 'mustache->parentNode is null' ); // todo: better message
+		}
 
 		$mustache->parentNode->replaceChild( $newNode, $mustache );
 
