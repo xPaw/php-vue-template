@@ -12,7 +12,7 @@ class Template
 		\LIBXML_NONET | // Disable network access when loading documents.
 		\LIBXML_NOXMLDECL | // Drop the XML declaration when saving a document.
 		\LIBXML_PARSEHUGE | // Relax any hardcoded limit from the parser.
-		\LIBXML_NOERROR | // Suppress error reports. TODO: we should report html parsing errors.
+		\LIBXML_NOERROR | // Suppress error reports.
 		\LIBXML_PEDANTIC; // Enable pedantic error reporting.
 
 	private \DOMDocument $DOM;
@@ -20,17 +20,36 @@ class Template
 	/** @var array<int, string> */
 	private array $expressions = [];
 	private int $expressionCount = 0;
+	private string $expressionTag = 'PHPEXPRESSION';
+
+	public function __construct()
+	{
+		$this->expressionTag .= bin2hex( random_bytes( 6 ) );
+	}
 
 	public function Parse( string $Data ) : void
 	{
 		$Data = '<?xml encoding="UTF-8">' . $Data;
 
+		$previousUseError = libxml_use_internal_errors( true );
+
 		// TODO: Handle loadHTML warnings, e.g. when html is not fully valid
 		$this->DOM = new \DOMDocument;
 
-		if( $this->DOM->loadHTML( $Data, self::LIBXML_OPTIONS ) === false )
+		$loadResult = $this->DOM->loadHTML( $Data, self::LIBXML_OPTIONS );
+
+		$errors = libxml_get_errors();
+		libxml_clear_errors();
+		libxml_use_internal_errors( $previousUseError );
+
+		if( $loadResult === false )
 		{
 			throw new \Exception( 'loadHTML call failed' ); // todo: better message
+		}
+
+		if( !empty( $errors ) )
+		{
+			print_r( $errors );
 		}
 
 		// Remove the <?xml encoding="UTF-8">
@@ -62,9 +81,16 @@ class Template
 		echo '[2] ' . $code . PHP_EOL;
 
 		// todo: a way to do this without replaces?
+		/** @var string $code */
 		$code = preg_replace_callback(
-			'/<PHPEXPRESSION c="([0-9]+)">/s',
-			fn( array $matches ) : string => $this->expressions[ (int)$matches[ 1 ] ],
+			'/<' . $this->expressionTag . ' c="(?<id>[0-9]+)">/s',
+			fn( array $matches ) : string => $this->expressions[ (int)$matches[ 'id' ] ],
+			$code
+		);
+
+		$code = preg_replace_callback(
+			'/' . $this->expressionTag . '_ATTR_(?<id>[0-9]+)/s',
+			fn( array $matches ) : string => $this->expressions[ (int)$matches[ 'id' ] ],
 			$code
 		);
 
@@ -73,7 +99,7 @@ class Template
 			throw new \Exception( 'preg_replace_callback call failed' ); // todo: better message
 		}
 
-		$code = str_replace( '</PHPEXPRESSION>', '<?php }?>', $code );
+		$code = str_replace( '</' . $this->expressionTag . '>', '<?php }?>', $code );
 		$code = str_replace( '?><?php', '', $code );
 
 		return $code;
@@ -95,63 +121,108 @@ class Template
 				continue;
 			}
 
+			if( $node->attributes === null )
+			{
+				$this->HandleNode( $node );
+				continue;
+			}
+
+
+			/** @var \DOMAttr[] $attributes */
+			$attributes = [];
 			$parsedAttribute = null;
 
-			// todo: check for duplicate attributes
-			// todo: check whether an `if` is open when handling `else`
-			// todo: check whether if/else is within the same parent node
-			if( $node->hasAttribute( 'v-if' ) )
+			/** @var \DOMAttr $attribute */
+			foreach( $node->attributes as $id => $attribute )
 			{
-				$parsedAttribute = 'v-if';
-				$expression = $node->getAttribute( 'v-if' );
-				$node->removeAttribute( 'v-if' );
-
-				$newNode = $this->DOM->createElement( 'PHPEXPRESSION' );
-				$newNode->setAttribute( 'c', (string)$this->expressionCount );
-				$parentNode->replaceChild( $newNode, $node );
-				$newNode->appendChild( $node );
-
-				$this->expressions[ $this->expressionCount ] = "<?php if({$expression}){ ?>";
-				$this->expressionCount++;
-			}
-
-			if( $node->hasAttribute( 'v-else-if' ) )
-			{
-				if( $parsedAttribute !== null )
+				if( $attribute->name[ 0 ] === ':' )
 				{
-					throw new \Exception( "Do not put v-else-if on the same element that has $parsedAttribute on line {$node->getLineNo()}." );
+					$attributes[] = new \DOMAttr(
+						substr( $attribute->name, 1 ),
+						$this->expressionTag . '_ATTR_' . $this->expressionCount
+					);
+
+					$this->expressions[ $this->expressionCount ] = "<?php echo \htmlspecialchars($attribute->value, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, 'UTF-8'); ?>";
+					$this->expressionCount++;
+
+					continue;
 				}
 
-				$parsedAttribute = 'v-else-if';
-				$expression = $node->getAttribute( 'v-else-if' );
-				$node->removeAttribute( 'v-else-if' );
-
-				$newNode = $this->DOM->createElement( 'PHPEXPRESSION' );
-				$newNode->setAttribute( 'c', (string)$this->expressionCount );
-				$parentNode->replaceChild( $newNode, $node );
-				$newNode->appendChild( $node );
-
-				$this->expressions[ $this->expressionCount ] = "<?php elseif({$expression}){ ?>";
-				$this->expressionCount++;
-			}
-
-			if( $node->hasAttribute( 'v-else' ) )
-			{
-				if( $parsedAttribute !== null )
+				// todo: check for duplicate attributes
+				// todo: check whether an `if` is open when handling `else`
+				// todo: check whether if/else is within the same parent node
+				if( $attribute->name === 'v-if' )
 				{
-					throw new \Exception( "Do not put v-else on the same element that has $parsedAttribute on line {$node->getLineNo()}." );
+					$parsedAttribute = $attribute->name;
+					$expression = $attribute->value;
+					$node->removeAttribute( $attribute->name ); // todo: this modifies array in place, breaks iteration
+
+					$newNode = $this->DOM->createElement( $this->expressionTag );
+					$newNode->setAttribute( 'c', (string)$this->expressionCount );
+					$parentNode->replaceChild( $newNode, $node );
+					$newNode->appendChild( $node );
+
+					$this->expressions[ $this->expressionCount ] = "<?php if({$expression}){ ?>";
+					$this->expressionCount++;
+
+					continue;
 				}
 
-				$parsedAttribute = 'v-else';
-				$node->removeAttribute( 'v-else' );
+				if( $attribute->name === 'v-else-if' )
+				{
+					if( $parsedAttribute !== null )
+					{
+						throw new \Exception( "Do not put v-else-if on the same element that has $parsedAttribute on line {$node->getLineNo()}." );
+					}
 
-				$newNode = $this->DOM->createElement( 'PHPEXPRESSION' );
-				$newNode->setAttribute( 'c', (string)$this->expressionCount );
-				$parentNode->replaceChild( $newNode, $node );
-				$newNode->appendChild( $node );
+					$parsedAttribute = $attribute->name;
+					$expression = $attribute->value;
+					$node->removeAttribute( $attribute->name ); // todo: this modifies array in place, breaks iteration
 
-				$this->expressions[ $this->expressionCount ] = "<?php else{ ?>";
-				$this->expressionCount++;
+					$newNode = $this->DOM->createElement( $this->expressionTag );
+					$newNode->setAttribute( 'c', (string)$this->expressionCount );
+					$parentNode->replaceChild( $newNode, $node );
+					$newNode->appendChild( $node );
+
+					$this->expressions[ $this->expressionCount ] = "<?php elseif({$expression}){ ?>";
+					$this->expressionCount++;
+
+					continue;
+				}
+
+				if( $attribute->name === 'v-else' )
+				{
+					if( $parsedAttribute !== null )
+					{
+						throw new \Exception( "Do not put v-else on the same element that has $parsedAttribute on line {$node->getLineNo()}." );
+					}
+
+					$parsedAttribute = $attribute->name;
+					$node->removeAttribute( $attribute->name ); // todo: this modifies array in place, breaks iteration
+
+					$newNode = $this->DOM->createElement( $this->expressionTag );
+					$newNode->setAttribute( 'c', (string)$this->expressionCount );
+					$parentNode->replaceChild( $newNode, $node );
+					$newNode->appendChild( $node );
+
+					$this->expressions[ $this->expressionCount ] = "<?php else{ ?>";
+					$this->expressionCount++;
+
+					continue;
+				}
+
+				$attributes[] = $attribute;
+			}
+
+			/** @var \DOMAttr $attribute */
+			foreach( iterator_to_array( $node->attributes ) as $attribute )
+			{
+				$node->removeAttributeNode( $attribute );
+			}
+
+			foreach( $attributes as $attribute )
+			{
+				$node->setAttributeNode( $attribute );
 			}
 
 			$this->HandleNode( $node );
@@ -206,7 +277,7 @@ class Template
 		$raw = \substr( $mustache->data, 2, -2 ); // todo: mb_?
 		$raw = \trim( $raw );
 
-		$newNode = $this->DOM->createElement( 'PHPEXPRESSION' );
+		$newNode = $this->DOM->createElement( $this->expressionTag );
 		$newNode->setAttribute( 'c', (string)$this->expressionCount );
 
 		if( $mustache->parentNode === null )
