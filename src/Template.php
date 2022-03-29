@@ -34,7 +34,9 @@ class Template
 		$previousUseError = libxml_use_internal_errors( true );
 
 		// TODO: Handle loadHTML warnings, e.g. when html is not fully valid
-		$this->DOM = new \DOMDocument;
+		$this->DOM = new \DOMDocument( encoding: 'UTF-8' );
+		//$this->DOM->preserveWhiteSpace = false;
+		//$this->DOM->formatOutput = false;
 
 		$loadResult = $this->DOM->loadHTML( $Data, self::LIBXML_OPTIONS );
 
@@ -127,14 +129,16 @@ class Template
 				continue;
 			}
 
-
 			/** @var \DOMAttr[] $attributes */
 			$attributes = [];
 			$parsedAttribute = null;
+			$skipChildren = false;
+
 
 			/** @var \DOMAttr $attribute */
-			foreach( $node->attributes as $id => $attribute )
+			foreach( $node->attributes as $attribute )
 			{
+				// Dynamically bind attribute to an expression.
 				if( $attribute->name[ 0 ] === ':' )
 				{
 					$attributes[] = new \DOMAttr(
@@ -148,26 +152,37 @@ class Template
 					continue;
 				}
 
-				// todo: check for duplicate attributes
-				// todo: check whether an `if` is open when handling `else`
-				// todo: check whether if/else is within the same parent node
+				// Skip compilation for this element and all its children.
+				if( $attribute->name === 'v-pre' )
+				{
+					$skipChildren = true;
+					continue;
+				}
+
+				// Conditionally render an element or a template fragment based on the truthy-ness of the expression value.
+				// TODO: When used together, v-if has a higher priority than v-for. We don't recommend using these two directives together on one element.
 				if( $attribute->name === 'v-if' )
 				{
+					if( $parsedAttribute !== null )
+					{
+						throw new \Exception( "Do not put v-if on the same element that has $parsedAttribute on line {$node->getLineNo()}." );
+					}
+
 					$parsedAttribute = $attribute->name;
-					$expression = $attribute->value;
-					$node->removeAttribute( $attribute->name ); // todo: this modifies array in place, breaks iteration
 
 					$newNode = $this->DOM->createElement( $this->expressionTag );
 					$newNode->setAttribute( 'c', (string)$this->expressionCount );
 					$parentNode->replaceChild( $newNode, $node );
 					$newNode->appendChild( $node );
 
-					$this->expressions[ $this->expressionCount ] = "<?php if({$expression}){ ?>";
+					$this->expressions[ $this->expressionCount ] = "<?php if({$attribute->value}){ ?>";
 					$this->expressionCount++;
 
 					continue;
 				}
 
+				// Denote the "else if block" for v-if. Can be chained.
+				// Restriction: previous sibling element must have v-if or v-else-if.
 				if( $attribute->name === 'v-else-if' )
 				{
 					if( $parsedAttribute !== null )
@@ -175,21 +190,27 @@ class Template
 						throw new \Exception( "Do not put v-else-if on the same element that has $parsedAttribute on line {$node->getLineNo()}." );
 					}
 
+					if( $node->previousSibling?->tagName !== $this->expressionTag )
+					{
+						// TODO: Actually test for v-if or v-else-if
+						throw new \Exception( "Previous sibling element must have v-if or v-else-if on line {$node->getLineNo()}." );
+					}
+
 					$parsedAttribute = $attribute->name;
-					$expression = $attribute->value;
-					$node->removeAttribute( $attribute->name ); // todo: this modifies array in place, breaks iteration
 
 					$newNode = $this->DOM->createElement( $this->expressionTag );
 					$newNode->setAttribute( 'c', (string)$this->expressionCount );
 					$parentNode->replaceChild( $newNode, $node );
 					$newNode->appendChild( $node );
 
-					$this->expressions[ $this->expressionCount ] = "<?php elseif({$expression}){ ?>";
+					$this->expressions[ $this->expressionCount ] = "<?php elseif({$attribute->value}){ ?>";
 					$this->expressionCount++;
 
 					continue;
 				}
 
+				// Denote the "else block" for v-if or a v-if / v-else-if chain.
+				// Restriction: previous sibling element must have v-if or v-else-if.
 				if( $attribute->name === 'v-else' )
 				{
 					if( $parsedAttribute !== null )
@@ -197,8 +218,13 @@ class Template
 						throw new \Exception( "Do not put v-else on the same element that has $parsedAttribute on line {$node->getLineNo()}." );
 					}
 
+					if( $node->previousSibling?->tagName !== $this->expressionTag )
+					{
+						// TODO: Actually test for v-if or v-else-if
+						//throw new \Exception( "Previous sibling element must have v-if or v-else-if on line {$node->getLineNo()}." );
+					}
+
 					$parsedAttribute = $attribute->name;
-					$node->removeAttribute( $attribute->name ); // todo: this modifies array in place, breaks iteration
 
 					$newNode = $this->DOM->createElement( $this->expressionTag );
 					$newNode->setAttribute( 'c', (string)$this->expressionCount );
@@ -206,6 +232,20 @@ class Template
 					$newNode->appendChild( $node );
 
 					$this->expressions[ $this->expressionCount ] = "<?php else{ ?>";
+					$this->expressionCount++;
+
+					continue;
+				}
+
+				// Render the element or template block multiple times based on the source data.
+				if( $attribute->name === 'v-for' )
+				{
+					$newNode = $this->DOM->createElement( $this->expressionTag );
+					$newNode->setAttribute( 'c', (string)$this->expressionCount );
+					$parentNode->replaceChild( $newNode, $node );
+					$newNode->appendChild( $node );
+
+					$this->expressions[ $this->expressionCount ] = "<?php foreach({$attribute->value}){ ?>";
 					$this->expressionCount++;
 
 					continue;
@@ -223,6 +263,11 @@ class Template
 			foreach( $attributes as $attribute )
 			{
 				$node->setAttributeNode( $attribute );
+			}
+
+			if( $skipChildren )
+			{
+				continue;
 			}
 
 			$this->HandleNode( $node );
