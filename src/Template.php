@@ -15,6 +15,12 @@ class Template
 		\LIBXML_NOERROR | // Suppress error reports.
 		\LIBXML_PEDANTIC; // Enable pedantic error reporting.
 
+	private const ATTR_IF = 'v-if';
+	private const ATTR_ELSE = 'v-else';
+	private const ATTR_ELSE_IF = 'v-else-if';
+	private const ATTR_FOR = 'v-for';
+	private const ATTR_PRE = 'v-pre';
+
 	private \DOMDocument $DOM;
 
 	/** @var array<int, string> */
@@ -145,28 +151,28 @@ class Template
 
 				if( $node->previousSibling?->tagName !== $this->expressionTag )
 				{
-					throw new \Exception( "Previous sibling element must have v-if or v-else-if on line {$node->getLineNo()}." );
+					throw new \Exception( "Previous sibling element must have " . self::ATTR_IF . " or " . self::ATTR_ELSE_IF . " on line {$node->getLineNo()}." );
 				}
 
 				$previousExpressionType = $node->previousSibling->getAttribute( 'type' );
 
-				if( $previousExpressionType !== 'v-if' && $previousExpressionType !== 'v-else-if' )
+				if( $previousExpressionType !== self::ATTR_IF && $previousExpressionType !== self::ATTR_ELSE_IF )
 				{
-					throw new \Exception( "Previous sibling element must have v-if or v-else-if on line {$node->getLineNo()}." );
+					throw new \Exception( "Previous sibling element must have " . self::ATTR_IF . " or " . self::ATTR_ELSE_IF . " on line {$node->getLineNo()}." );
 				}
 			};
 
 			// Skip compilation for this element and all its children.
-			if( $node->hasAttribute( 'v-pre' ) )
+			if( $node->hasAttribute( self::ATTR_PRE ) )
 			{
-				$node->removeAttribute( 'v-pre' );
+				$node->removeAttribute( self::ATTR_PRE );
 				$skipChildren = true;
 			}
 
 			// Conditionally render an element based on the truthy-ness of the expression value.
-			if( $node->hasAttribute( 'v-if' ) )
+			if( $node->hasAttribute( self::ATTR_IF ) )
 			{
-				$attribute = $node->getAttributeNode( 'v-if' );
+				$attribute = $node->getAttributeNode( self::ATTR_IF );
 				$node->removeAttributeNode( $attribute );
 
 				$newNode = $this->DOM->createElement( $this->expressionTag );
@@ -181,9 +187,9 @@ class Template
 
 			// Denote the "else if block" for v-if. Can be chained.
 			// Restriction: previous sibling element must have v-if or v-else-if.
-			if( $node->hasAttribute( 'v-else-if' ) )
+			if( $node->hasAttribute( self::ATTR_ELSE_IF ) )
 			{
-				$attribute = $node->getAttributeNode( 'v-else-if' );
+				$attribute = $node->getAttributeNode( self::ATTR_ELSE_IF );
 				$node->removeAttributeNode( $attribute );
 
 				$testPreviousSibling( $attribute->name );
@@ -200,9 +206,9 @@ class Template
 
 			// Denote the "else block" for v-if or a v-if / v-else-if chain.
 			// Restriction: previous sibling element must have v-if or v-else-if.
-			if( $node->hasAttribute( 'v-else' ) )
+			if( $node->hasAttribute( self::ATTR_ELSE ) )
 			{
-				$attribute = $node->getAttributeNode( 'v-else' );
+				$attribute = $node->getAttributeNode( self::ATTR_ELSE );
 				$node->removeAttributeNode( $attribute );
 
 				$testPreviousSibling( $attribute->name );
@@ -218,9 +224,9 @@ class Template
 			}
 
 			// Render the element or template block multiple times based on the source data.
-			if( $node->hasAttribute( 'v-for' ) )
+			if( $node->hasAttribute( self::ATTR_FOR ) )
 			{
-				$attribute = $node->getAttributeNode( 'v-for' );
+				$attribute = $node->getAttributeNode( self::ATTR_FOR );
 				$node->removeAttributeNode( $attribute );
 
 				$newNodeFor = $this->DOM->createElement( $this->expressionTag );
