@@ -35,6 +35,8 @@ class Template
 
 	public function Parse( string $Data ) : void
 	{
+		echo '===== [1]' . PHP_EOL . $Data . PHP_EOL;
+
 		$Data = '<?xml encoding="UTF-8">' . $Data;
 
 		$previousUseError = libxml_use_internal_errors( true );
@@ -72,6 +74,8 @@ class Template
 
 		$this->DOM->encoding = 'UTF-8';
 
+		echo '===== [2]' . PHP_EOL . $this->DOM->saveHTML() . PHP_EOL;
+
 		$this->HandleNode( $this->DOM );
 	}
 
@@ -86,7 +90,7 @@ class Template
 			throw new \Exception( 'saveHTML call failed' ); // todo: better message
 		}
 
-		echo '[2] ' . $code . PHP_EOL;
+		echo '===== [3]' . PHP_EOL . $code . PHP_EOL;
 
 		// todo: a way to do this without replaces?
 		/** @var string $code */
@@ -109,6 +113,8 @@ class Template
 
 		$code = str_replace( '</' . $this->expressionTag . '>', '<?php }?>', $code );
 		$code = str_replace( '?><?php', '', $code );
+
+		echo '===== [4]' . PHP_EOL . $code . PHP_EOL;
 
 		return $code;
 	}
@@ -149,12 +155,12 @@ class Template
 					throw new \Exception( "Do not put $name on the same element that already has {$newNode->getAttribute( 'type' )} on line {$node->getLineNo()}." );
 				}
 
-				if( $node->previousSibling?->tagName !== $this->expressionTag )
-				{
-					throw new \Exception( "Previous sibling element must have " . self::ATTR_IF . " or " . self::ATTR_ELSE_IF . " on line {$node->getLineNo()}." );
-				}
+				$previousExpressionType = null;
 
-				$previousExpressionType = $node->previousSibling->getAttribute( 'type' );
+				if( $node->previousSibling?->tagName === $this->expressionTag )
+				{
+					$previousExpressionType = $node->previousSibling->getAttribute( 'type' );
+				}
 
 				if( $previousExpressionType !== self::ATTR_IF && $previousExpressionType !== self::ATTR_ELSE_IF )
 				{
