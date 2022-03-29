@@ -90,11 +90,14 @@ class Template
 				continue;
 			}
 
+			$parsedAttribute = null;
+
 			// todo: check for duplicate attributes
 			// todo: check whether an `if` is open when handling `else`
 			// todo: check whether if/else is within the same parent node
 			if( $node->hasAttribute( 'v-if' ) )
 			{
+				$parsedAttribute = 'v-if';
 				$expression = $node->getAttribute( 'v-if' );
 				$node->removeAttribute( 'v-if' );
 
@@ -106,8 +109,15 @@ class Template
 				$this->expressions[ $this->expressionCount ] = "<?php if({$expression}){ ?>";
 				$this->expressionCount++;
 			}
-			else if( $node->hasAttribute( 'v-else-if' ) )
+
+			if( $node->hasAttribute( 'v-else-if' ) )
 			{
+				if( $parsedAttribute !== null )
+				{
+					throw new \Exception( "Do not put v-else-if on the same element that has $parsedAttribute on line {$node->getLineNo()}." );
+				}
+
+				$parsedAttribute = 'v-else-if';
 				$expression = $node->getAttribute( 'v-else-if' );
 				$node->removeAttribute( 'v-else-if' );
 
@@ -119,8 +129,15 @@ class Template
 				$this->expressions[ $this->expressionCount ] = "<?php elseif({$expression}){ ?>";
 				$this->expressionCount++;
 			}
-			else if( $node->hasAttribute( 'v-else' ) )
+
+			if( $node->hasAttribute( 'v-else' ) )
 			{
+				if( $parsedAttribute !== null )
+				{
+					throw new \Exception( "Do not put v-else on the same element that has $parsedAttribute on line {$node->getLineNo()}." );
+				}
+
+				$parsedAttribute = 'v-else';
 				$node->removeAttribute( 'v-else' );
 
 				$newNode = $this->DOM->createElement( 'PHPEXPRESSION' );
@@ -150,7 +167,7 @@ class Template
 			{
 				if( $isOpen )
 				{
-					throw new \Exception( "Opening mustache tag at position $i, but a tag was already open at position $start." );
+					throw new \Exception( "Opening mustache tag at position $i, but a tag was already open at position $start on line {$node->getLineNo()}." );
 				}
 
 				$isOpen = true;
@@ -161,7 +178,7 @@ class Template
 			{
 				if( !$isOpen )
 				{
-					throw new \Exception( "Closing mustache tag at position $i, but it was never opened." );
+					throw new \Exception( "Closing mustache tag at position $i, but it was never opened on line {$node->getLineNo()}." );
 				}
 
 				$end = $i + 2;
@@ -176,7 +193,7 @@ class Template
 
 		if( $end === -1 )
 		{
-			throw new \Exception( "Opening mustache tag at position $start, but it was never closed." );
+			throw new \Exception( "Opening mustache tag at position $start, but it was never closed on line {$node->getLineNo()}." );
 		}
 
 		$mustache = $node->splitText( $start );
