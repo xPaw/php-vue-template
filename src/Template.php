@@ -148,11 +148,11 @@ class Template
 			$newNode = null;
 			$skipChildren = false;
 
-			$testPreviousSibling = function( string $name ) use ( $node, $newNode )
+			$testPreviousSibling = function( string $name, \DOMElement $node, ?\DOMElement $newNode )
 			{
 				if( $newNode !== null )
 				{
-					throw new \Exception( "Do not put $name on the same element that already has {$newNode->getAttribute( 'type' )} on line {$node->getLineNo()}." );
+					throw new SyntaxError( "Do not put $name on the same element that already has {$newNode->getAttribute( 'type' )}", $node->getLineNo() );
 				}
 
 				$previousExpressionType = null;
@@ -164,15 +164,21 @@ class Template
 
 				if( $previousExpressionType !== self::ATTR_IF && $previousExpressionType !== self::ATTR_ELSE_IF )
 				{
-					throw new \Exception( "Previous sibling element must have " . self::ATTR_IF . " or " . self::ATTR_ELSE_IF . " on line {$node->getLineNo()}." );
+					throw new SyntaxError( "Previous sibling element must have " . self::ATTR_IF . " or " . self::ATTR_ELSE_IF, $node->getLineNo() );
 				}
 			};
 
 			// Skip compilation for this element and all its children.
 			if( $node->hasAttribute( self::ATTR_PRE ) )
 			{
-				$node->removeAttribute( self::ATTR_PRE );
+				$attribute = $node->getAttributeNode( self::ATTR_PRE );
+				$node->removeAttributeNode( $attribute );
 				$skipChildren = true;
+
+				if( !empty( $attribute->value ) )
+				{
+					throw new SyntaxError( "Attribute $attribute->name must be empty", $node->getLineNo() );
+				}
 			}
 
 			// Conditionally render an element based on the truthy-ness of the expression value.
@@ -180,6 +186,11 @@ class Template
 			{
 				$attribute = $node->getAttributeNode( self::ATTR_IF );
 				$node->removeAttributeNode( $attribute );
+
+				if( empty( $attribute->value ) )
+				{
+					throw new SyntaxError( "Attribute $attribute->name must not be empty", $node->getLineNo() );
+				}
 
 				$newNode = $this->DOM->createElement( $this->expressionTag );
 				$newNode->setAttribute( 'c', (string)$this->expressionCount );
@@ -198,7 +209,12 @@ class Template
 				$attribute = $node->getAttributeNode( self::ATTR_ELSE_IF );
 				$node->removeAttributeNode( $attribute );
 
-				$testPreviousSibling( $attribute->name );
+				if( empty( $attribute->value ) )
+				{
+					throw new SyntaxError( "Attribute $attribute->name must not be empty", $node->getLineNo() );
+				}
+
+				$testPreviousSibling( $attribute->name, $node, $newNode );
 
 				$newNode = $this->DOM->createElement( $this->expressionTag );
 				$newNode->setAttribute( 'c', (string)$this->expressionCount );
@@ -217,7 +233,12 @@ class Template
 				$attribute = $node->getAttributeNode( self::ATTR_ELSE );
 				$node->removeAttributeNode( $attribute );
 
-				$testPreviousSibling( $attribute->name );
+				if( !empty( $attribute->value ) )
+				{
+					throw new SyntaxError( "Attribute $attribute->name must be empty", $node->getLineNo() );
+				}
+
+				$testPreviousSibling( $attribute->name, $node, $newNode );
 
 				$newNode = $this->DOM->createElement( $this->expressionTag );
 				$newNode->setAttribute( 'c', (string)$this->expressionCount );
@@ -229,11 +250,16 @@ class Template
 				$this->expressionCount++;
 			}
 
-			// Render the element or template block multiple times based on the source data.
+			// Render the element multiple times based on the source data.
 			if( $node->hasAttribute( self::ATTR_FOR ) )
 			{
 				$attribute = $node->getAttributeNode( self::ATTR_FOR );
 				$node->removeAttributeNode( $attribute );
+
+				if( empty( $attribute->value ) )
+				{
+					throw new SyntaxError( "Attribute $attribute->name must not be empty", $node->getLineNo() );
+				}
 
 				$newNodeFor = $this->DOM->createElement( $this->expressionTag );
 				$newNodeFor->setAttribute( 'c', (string)$this->expressionCount );
@@ -307,7 +333,7 @@ class Template
 			{
 				if( $isOpen )
 				{
-					throw new \Exception( "Opening mustache tag at position $i, but a tag was already open at position $start on line {$node->getLineNo()}." );
+					throw new SyntaxError( "Opening mustache tag at position $i, but a tag was already open at position $start", $node->getLineNo() );
 				}
 
 				$isOpen = true;
@@ -318,7 +344,7 @@ class Template
 			{
 				if( !$isOpen )
 				{
-					throw new \Exception( "Closing mustache tag at position $i, but it was never opened on line {$node->getLineNo()}." );
+					throw new SyntaxError( "Closing mustache tag at position $i, but it was never opened", $node->getLineNo() );
 				}
 
 				$end = $i + 2;
@@ -333,7 +359,7 @@ class Template
 
 		if( $end === -1 )
 		{
-			throw new \Exception( "Opening mustache tag at position $start, but it was never closed on line {$node->getLineNo()}." );
+			throw new SyntaxError( "Opening mustache tag at position $start, but it was never closed", $node->getLineNo() );
 		}
 
 		$mustache = $node->splitText( $start );
