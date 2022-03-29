@@ -53,12 +53,12 @@ class Template
 		}
 
 		// Remove the <?xml encoding="UTF-8">
-		// todo: this may remove user element?
 		foreach( $this->DOM->childNodes as $node )
 		{
-			if( $node->nodeType == XML_PI_NODE )
+			if( $node instanceof \DOMProcessingInstruction )
 			{
 				$this->DOM->removeChild( $node );
+				break;
 			}
 		}
 
