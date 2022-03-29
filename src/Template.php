@@ -6,13 +6,14 @@ namespace xPaw\Template;
 class Template
 {
 	private const LIBXML_OPTIONS =
-		\LIBXML_COMPACT |
-		\LIBXML_HTML_NODEFDTD |
-		\LIBXML_HTML_NOIMPLIED |
-		\LIBXML_NONET |
-		\LIBXML_NOXMLDECL |
-		\LIBXML_PARSEHUGE |
-		\LIBXML_PEDANTIC;
+		\LIBXML_COMPACT | // Activate small nodes allocation optimization.
+		\LIBXML_HTML_NODEFDTD | // Prevent a default doctype being added when one is not found.
+		\LIBXML_HTML_NOIMPLIED | // Turn off the automatic adding of implied html/body... elements.
+		\LIBXML_NONET | // Disable network access when loading documents.
+		\LIBXML_NOXMLDECL | // Drop the XML declaration when saving a document.
+		\LIBXML_PARSEHUGE | // Relax any hardcoded limit from the parser.
+		\LIBXML_NOERROR | // Suppress error reports. TODO: we should report html parsing errors.
+		\LIBXML_PEDANTIC; // Enable pedantic error reporting.
 
 	private \DOMDocument $DOM;
 
@@ -20,19 +21,20 @@ class Template
 	private array $expressions = [];
 	private int $expressionCount = 0;
 
-	public function __construct()
-	{
-		\libxml_use_internal_errors( true ); // todo
-	}
-
 	public function Parse( string $Data ) : void
 	{
-		$this->DOM = new \DOMDocument;
-		$this->DOM->loadHTML( '<?xml encoding="UTF-8">' . $Data, self::LIBXML_OPTIONS );
+		$Data = '<?xml encoding="UTF-8">' . $Data;
 
-		//libxml_clear_errors();
+		// TODO: Handle loadHTML warnings, e.g. when html is not fully valid
+		$this->DOM = new \DOMDocument;
+
+		if( $this->DOM->loadHTML( $Data, self::LIBXML_OPTIONS ) === false )
+		{
+			throw new \Exception( 'loadHTML call failed' ); // todo: better message
+		}
 
 		// Remove the <?xml encoding="UTF-8">
+		// todo: this may remove user element?
 		foreach( $this->DOM->childNodes as $node )
 		{
 			if( $node->nodeType == XML_PI_NODE )
@@ -48,7 +50,9 @@ class Template
 
 	public function OutputCode() : string
 	{
-		$code = $this->DOM->saveHTML(); // todo: this adds <p> wrapper for text without elements
+		// todo: this adds <p> wrapper for text without elements
+		// todo: this turns <div /> into <div></div>
+		$code = $this->DOM->saveHTML();
 
 		if( $code === false )
 		{
@@ -79,6 +83,7 @@ class Template
 	{
 		foreach( \iterator_to_array( $parentNode->childNodes ) as $node )
 		{
+			// TODO: Handle DOMComment, it has no splitText
 			if( $node instanceof \DOMText )
 			{
 				$this->HandleMustacheVariables( $node );
