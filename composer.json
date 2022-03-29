@@ -1,0 +1,22 @@
+{
+    "name": "xpaw/template",
+    "description": "HTML-based template syntax inspired by Vue.",
+    "type": "library",
+    "license": "MIT",
+	"scripts": {
+		"phpstan": "phpstan"
+	},
+    "autoload": {
+        "psr-4": {
+            "xPaw\\Template\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Pavel Djundik"
+        }
+    ],
+    "require-dev": {
+        "phpstan/phpstan": "^1.5"
+    }
+}
