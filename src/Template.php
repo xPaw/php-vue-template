@@ -35,6 +35,9 @@ class Template
 
 	public function Parse( string $Data ) : void
 	{
+		$this->expressions = [];
+		$this->expressionCount = 0;
+
 		echo '===== [1]' . PHP_EOL . $Data . PHP_EOL;
 
 		$Data = '<?xml encoding="UTF-8">' . $Data;
@@ -136,186 +139,190 @@ class Template
 				continue;
 			}
 
-			if( $node->attributes === null )
+			if( empty( $node->attributes ) )
 			{
 				$this->HandleNode( $node );
 				continue;
 			}
 
-			/** @var \DOMAttr[] $attributes */
-			$attributes = [];
-			/** @var \DOMElement|null $newNode */
-			$newNode = null;
-			$skipChildren = false;
-
-			$testPreviousSibling = function( string $name, \DOMElement $node, ?\DOMElement $newNode )
-			{
-				if( $newNode !== null )
-				{
-					throw new SyntaxError( "Do not put $name on the same element that already has {$newNode->getAttribute( 'type' )}", $node->getLineNo() );
-				}
-
-				$previousExpressionType = null;
-
-				if( $node->previousSibling?->tagName === $this->expressionTag )
-				{
-					$previousExpressionType = $node->previousSibling->getAttribute( 'type' );
-				}
-
-				if( $previousExpressionType !== self::ATTR_IF && $previousExpressionType !== self::ATTR_ELSE_IF )
-				{
-					throw new SyntaxError( "Previous sibling element must have " . self::ATTR_IF . " or " . self::ATTR_ELSE_IF, $node->getLineNo() );
-				}
-			};
+			$this->HandleAttributes( $node );
 
 			// Skip compilation for this element and all its children.
 			if( $node->hasAttribute( self::ATTR_PRE ) )
 			{
 				$attribute = $node->getAttributeNode( self::ATTR_PRE );
 				$node->removeAttributeNode( $attribute );
-				$skipChildren = true;
-
-				if( !empty( $attribute->value ) )
-				{
-					throw new SyntaxError( "Attribute $attribute->name must be empty", $node->getLineNo() );
-				}
-			}
-
-			// Conditionally render an element based on the truthy-ness of the expression value.
-			if( $node->hasAttribute( self::ATTR_IF ) )
-			{
-				$attribute = $node->getAttributeNode( self::ATTR_IF );
-				$node->removeAttributeNode( $attribute );
-
-				if( empty( $attribute->value ) )
-				{
-					throw new SyntaxError( "Attribute $attribute->name must not be empty", $node->getLineNo() );
-				}
-
-				$newNode = $this->DOM->createElement( $this->expressionTag );
-				$newNode->setAttribute( 'c', (string)$this->expressionCount );
-				$newNode->setAttribute( 'type', $attribute->name );
-				$parentNode->replaceChild( $newNode, $node );
-				$newNode->appendChild( $node );
-
-				$this->expressions[ $this->expressionCount ] = "<?php if({$attribute->value}){ ?>";
-				$this->expressionCount++;
-			}
-
-			// Denote the "else if block" for v-if. Can be chained.
-			// Restriction: previous sibling element must have v-if or v-else-if.
-			if( $node->hasAttribute( self::ATTR_ELSE_IF ) )
-			{
-				$attribute = $node->getAttributeNode( self::ATTR_ELSE_IF );
-				$node->removeAttributeNode( $attribute );
-
-				if( empty( $attribute->value ) )
-				{
-					throw new SyntaxError( "Attribute $attribute->name must not be empty", $node->getLineNo() );
-				}
-
-				$testPreviousSibling( $attribute->name, $node, $newNode );
-
-				$newNode = $this->DOM->createElement( $this->expressionTag );
-				$newNode->setAttribute( 'c', (string)$this->expressionCount );
-				$newNode->setAttribute( 'type', $attribute->name );
-				$parentNode->replaceChild( $newNode, $node );
-				$newNode->appendChild( $node );
-
-				$this->expressions[ $this->expressionCount ] = "<?php elseif({$attribute->value}){ ?>";
-				$this->expressionCount++;
-			}
-
-			// Denote the "else block" for v-if or a v-if / v-else-if chain.
-			// Restriction: previous sibling element must have v-if or v-else-if.
-			if( $node->hasAttribute( self::ATTR_ELSE ) )
-			{
-				$attribute = $node->getAttributeNode( self::ATTR_ELSE );
-				$node->removeAttributeNode( $attribute );
 
 				if( !empty( $attribute->value ) )
 				{
 					throw new SyntaxError( "Attribute $attribute->name must be empty", $node->getLineNo() );
 				}
 
-				$testPreviousSibling( $attribute->name, $node, $newNode );
-
-				$newNode = $this->DOM->createElement( $this->expressionTag );
-				$newNode->setAttribute( 'c', (string)$this->expressionCount );
-				$newNode->setAttribute( 'type', $attribute->name );
-				$parentNode->replaceChild( $newNode, $node );
-				$newNode->appendChild( $node );
-
-				$this->expressions[ $this->expressionCount ] = "<?php else{ ?>";
-				$this->expressionCount++;
-			}
-
-			// Render the element multiple times based on the source data.
-			if( $node->hasAttribute( self::ATTR_FOR ) )
-			{
-				$attribute = $node->getAttributeNode( self::ATTR_FOR );
-				$node->removeAttributeNode( $attribute );
-
-				if( empty( $attribute->value ) )
-				{
-					throw new SyntaxError( "Attribute $attribute->name must not be empty", $node->getLineNo() );
-				}
-
-				$newNodeFor = $this->DOM->createElement( $this->expressionTag );
-				$newNodeFor->setAttribute( 'c', (string)$this->expressionCount );
-				$newNodeFor->setAttribute( 'type', $attribute->name );
-
-				// When used together, v-if has a higher priority than v-for.
-				if( $newNode !== null )
-				{
-					$newNode->replaceChild( $newNodeFor, $node );
-				}
-				else
-				{
-					$parentNode->replaceChild( $newNodeFor, $node );
-				}
-
-				$newNodeFor->appendChild( $node );
-
-				$this->expressions[ $this->expressionCount ] = "<?php foreach({$attribute->value}){ ?>";
-				$this->expressionCount++;
-			}
-
-			/** @var \DOMAttr $attribute */
-			foreach( \iterator_to_array( $node->attributes ) as $attribute )
-			{
-				$node->removeAttributeNode( $attribute );
-
-				// Dynamically bind attribute to an expression.
-				if( $attribute->name[ 0 ] !== ':' )
-				{
-					$attributes[] = $attribute;
-
-					continue;
-				}
-
-				$attributes[] = new \DOMAttr(
-					\substr( $attribute->name, 1 ),
-					$this->expressionTag . '_ATTR_' . $this->expressionCount
-				);
-
-				$this->expressions[ $this->expressionCount ] = "<?php echo \htmlspecialchars($attribute->value, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, 'UTF-8'); ?>";
-				$this->expressionCount++;
-			}
-
-			// Set new attributes after processing
-			foreach( $attributes as $attribute )
-			{
-				$node->setAttributeNode( $attribute );
-			}
-
-			// Do not descend into children nodes if v-pre was set
-			if( $skipChildren )
-			{
 				continue;
 			}
 
 			$this->HandleNode( $node );
+		}
+	}
+
+	private function HandleAttributes( \DOMElement $node ) : void
+	{
+		if( $node->parentNode === null || $node->attributes === null )
+		{
+			throw new \Exception( 'This should never happen.' );
+		}
+
+		/** @var \DOMAttr[] $attributes */
+		$attributes = [];
+		/** @var \DOMElement|null $newNode */
+		$newNode = null;
+
+		$testPreviousSibling = function( string $name, \DOMElement $node, ?\DOMElement $newNode )
+		{
+			if( $newNode !== null )
+			{
+				throw new SyntaxError( "Do not put $name on the same element that already has {$newNode->getAttribute( 'type' )}", $node->getLineNo() );
+			}
+
+			$previousExpressionType = null;
+
+			if( $node->previousSibling?->tagName === $this->expressionTag )
+			{
+				$previousExpressionType = $node->previousSibling->getAttribute( 'type' );
+			}
+
+			if( $previousExpressionType !== self::ATTR_IF && $previousExpressionType !== self::ATTR_ELSE_IF )
+			{
+				throw new SyntaxError( "Previous sibling element must have " . self::ATTR_IF . " or " . self::ATTR_ELSE_IF, $node->getLineNo() );
+			}
+		};
+
+		// Conditionally render an element based on the truthy-ness of the expression value.
+		if( $node->hasAttribute( self::ATTR_IF ) )
+		{
+			$attribute = $node->getAttributeNode( self::ATTR_IF );
+			$node->removeAttributeNode( $attribute );
+
+			if( empty( $attribute->value ) )
+			{
+				throw new SyntaxError( "Attribute $attribute->name must not be empty", $node->getLineNo() );
+			}
+
+			$newNode = $this->DOM->createElement( $this->expressionTag );
+			$newNode->setAttribute( 'c', (string)$this->expressionCount );
+			$newNode->setAttribute( 'type', $attribute->name );
+			$node->parentNode->replaceChild( $newNode, $node );
+			$newNode->appendChild( $node );
+
+			$this->expressions[ $this->expressionCount ] = "<?php if({$attribute->value}){ ?>";
+			$this->expressionCount++;
+		}
+
+		// Denote the "else if block" for v-if. Can be chained.
+		// Restriction: previous sibling element must have v-if or v-else-if.
+		if( $node->hasAttribute( self::ATTR_ELSE_IF ) )
+		{
+			$attribute = $node->getAttributeNode( self::ATTR_ELSE_IF );
+			$node->removeAttributeNode( $attribute );
+
+			if( empty( $attribute->value ) )
+			{
+				throw new SyntaxError( "Attribute $attribute->name must not be empty", $node->getLineNo() );
+			}
+
+			$testPreviousSibling( $attribute->name, $node, $newNode );
+
+			$newNode = $this->DOM->createElement( $this->expressionTag );
+			$newNode->setAttribute( 'c', (string)$this->expressionCount );
+			$newNode->setAttribute( 'type', $attribute->name );
+			$node->parentNode->replaceChild( $newNode, $node );
+			$newNode->appendChild( $node );
+
+			$this->expressions[ $this->expressionCount ] = "<?php elseif({$attribute->value}){ ?>";
+			$this->expressionCount++;
+		}
+
+		// Denote the "else block" for v-if or a v-if / v-else-if chain.
+		// Restriction: previous sibling element must have v-if or v-else-if.
+		if( $node->hasAttribute( self::ATTR_ELSE ) )
+		{
+			$attribute = $node->getAttributeNode( self::ATTR_ELSE );
+			$node->removeAttributeNode( $attribute );
+
+			if( !empty( $attribute->value ) )
+			{
+				throw new SyntaxError( "Attribute $attribute->name must be empty", $node->getLineNo() );
+			}
+
+			$testPreviousSibling( $attribute->name, $node, $newNode );
+
+			$newNode = $this->DOM->createElement( $this->expressionTag );
+			$newNode->setAttribute( 'c', (string)$this->expressionCount );
+			$newNode->setAttribute( 'type', $attribute->name );
+			$node->parentNode->replaceChild( $newNode, $node );
+			$newNode->appendChild( $node );
+
+			$this->expressions[ $this->expressionCount ] = "<?php else{ ?>";
+			$this->expressionCount++;
+		}
+
+		// Render the element multiple times based on the source data.
+		if( $node->hasAttribute( self::ATTR_FOR ) )
+		{
+			$attribute = $node->getAttributeNode( self::ATTR_FOR );
+			$node->removeAttributeNode( $attribute );
+
+			if( empty( $attribute->value ) )
+			{
+				throw new SyntaxError( "Attribute $attribute->name must not be empty", $node->getLineNo() );
+			}
+
+			$newNodeFor = $this->DOM->createElement( $this->expressionTag );
+			$newNodeFor->setAttribute( 'c', (string)$this->expressionCount );
+			$newNodeFor->setAttribute( 'type', $attribute->name );
+
+			// When used together, v-if has a higher priority than v-for.
+			if( $newNode !== null )
+			{
+				$newNode->replaceChild( $newNodeFor, $node );
+			}
+			else
+			{
+				$node->parentNode->replaceChild( $newNodeFor, $node );
+			}
+
+			$newNodeFor->appendChild( $node );
+
+			$this->expressions[ $this->expressionCount ] = "<?php foreach({$attribute->value}){ ?>";
+			$this->expressionCount++;
+		}
+
+		/** @var \DOMAttr $attribute */
+		foreach( \iterator_to_array( $node->attributes ) as $attribute )
+		{
+			$node->removeAttributeNode( $attribute );
+
+			// Dynamically bind attribute to an expression.
+			if( $attribute->name[ 0 ] !== ':' )
+			{
+				$attributes[] = $attribute;
+
+				continue;
+			}
+
+			$attributes[] = new \DOMAttr(
+				\substr( $attribute->name, 1 ),
+				$this->expressionTag . '_ATTR_' . $this->expressionCount
+			);
+
+			$this->expressions[ $this->expressionCount ] = "<?php echo \htmlspecialchars($attribute->value, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, 'UTF-8'); ?>";
+			$this->expressionCount++;
+		}
+
+		// Set new attributes after processing
+		foreach( $attributes as $attribute )
+		{
+			$node->setAttributeNode( $attribute );
 		}
 	}
 
