@@ -16,6 +16,11 @@
             "name": "Pavel Djundik"
         }
     ],
+	"require": {
+		"php": ">=8.1",
+		"ext-dom": "*",
+		"ext-libxml" : "*"
+	},
     "require-dev": {
         "phpstan/phpstan": "^1.5"
     }
