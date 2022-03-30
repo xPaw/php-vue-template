@@ -4,6 +4,11 @@
     "type": "library",
     "license": "MIT",
 	"scripts": {
+		"test": "phpunit --color",
+		"coverage": [
+			"@putenv XDEBUG_MODE=coverage",
+			"phpunit --color --coverage-html coverage"
+		],
 		"phpstan": "phpstan"
 	},
     "autoload": {
@@ -22,6 +27,7 @@
 		"ext-libxml" : "*"
 	},
     "require-dev": {
-        "phpstan/phpstan": "^1.5"
+        "phpstan/phpstan": "^1.5",
+        "phpunit/phpunit": "^9.5"
     }
 }

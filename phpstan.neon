@@ -2,4 +2,4 @@ parameters:
 	level: max
 	paths:
 		- src/
-		- test.php
+		- tests/

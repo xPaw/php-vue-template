@@ -13,6 +13,7 @@ class Template
 		\LIBXML_NOXMLDECL | // Drop the XML declaration when saving a document.
 		\LIBXML_PARSEHUGE | // Relax any hardcoded limit from the parser.
 		\LIBXML_NOERROR | // Suppress error reports.
+		\LIBXML_NOBLANKS | // Remove blank nodes.
 		\LIBXML_PEDANTIC; // Enable pedantic error reporting.
 
 	private const ATTR_IF = 'v-if';
@@ -28,6 +29,8 @@ class Template
 	private int $expressionCount = 0;
 	private string $expressionTag = 'PHPEXPRESSION';
 
+	public bool $Debug = false;
+
 	public function __construct()
 	{
 		$this->expressionTag .= bin2hex( random_bytes( 6 ) );
@@ -38,7 +41,10 @@ class Template
 		$this->expressions = [];
 		$this->expressionCount = 0;
 
-		echo '===== [1]' . PHP_EOL . $Data . PHP_EOL;
+		if( $this->Debug )
+		{
+			echo '===== [1]' . PHP_EOL . $Data . PHP_EOL;
+		}
 
 		$Data = '<?xml encoding="UTF-8">' . $Data;
 
@@ -77,7 +83,10 @@ class Template
 
 		$this->DOM->encoding = 'UTF-8';
 
-		echo '===== [2]' . PHP_EOL . $this->DOM->saveHTML() . PHP_EOL;
+		if( $this->Debug )
+		{
+			echo '===== [2]' . PHP_EOL . $this->DOM->saveHTML() . PHP_EOL;
+		}
 
 		$this->HandleNode( $this->DOM );
 	}
@@ -93,7 +102,12 @@ class Template
 			throw new \Exception( 'saveHTML call failed' ); // todo: better message
 		}
 
-		echo '===== [3]' . PHP_EOL . $code . PHP_EOL;
+		$code = \rtrim( $code, "\n" ); // todo: why is it outputting a new line?
+
+		if( $this->Debug )
+		{
+			echo '===== [3]' . PHP_EOL . $code . PHP_EOL;
+		}
 
 		// todo: a way to do this without replaces?
 		/** @var string $code */
@@ -117,7 +131,10 @@ class Template
 		$code = str_replace( '</' . $this->expressionTag . '>', '<?php }?>', $code );
 		$code = str_replace( '?><?php', '', $code );
 
-		echo '===== [4]' . PHP_EOL . $code . PHP_EOL;
+		if( $this->Debug )
+		{
+			echo '===== [4]' . PHP_EOL . $code . PHP_EOL;
+		}
 
 		return $code;
 	}
@@ -139,7 +156,7 @@ class Template
 				continue;
 			}
 
-			if( empty( $node->attributes ) )
+			if( $node->attributes === null || $node->attributes->length === 0 )
 			{
 				$this->HandleNode( $node );
 				continue;
