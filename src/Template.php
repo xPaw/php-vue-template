@@ -225,13 +225,15 @@ class Template
 				throw new SyntaxError( "Attribute $attribute->name must not be empty", $node->getLineNo() );
 			}
 
+			$this->ValidateExpression( "if($attribute->value);", $node->getLineNo() );
+
 			$newNode = $this->DOM->createElement( $this->expressionTag );
 			$newNode->setAttribute( 'c', (string)$this->expressionCount );
 			$newNode->setAttribute( 'type', $attribute->name );
 			$node->parentNode->replaceChild( $newNode, $node );
 			$newNode->appendChild( $node );
 
-			$this->expressions[ $this->expressionCount ] = "<?php if({$attribute->value}){ ?>";
+			$this->expressions[ $this->expressionCount ] = "<?php if($attribute->value){ ?>";
 			$this->expressionCount++;
 		}
 
@@ -249,13 +251,15 @@ class Template
 
 			$testPreviousSibling( $attribute->name, $node, $newNode );
 
+			$this->ValidateExpression( "if($attribute->value);", $node->getLineNo() );
+
 			$newNode = $this->DOM->createElement( $this->expressionTag );
 			$newNode->setAttribute( 'c', (string)$this->expressionCount );
 			$newNode->setAttribute( 'type', $attribute->name );
 			$node->parentNode->replaceChild( $newNode, $node );
 			$newNode->appendChild( $node );
 
-			$this->expressions[ $this->expressionCount ] = "<?php elseif({$attribute->value}){ ?>";
+			$this->expressions[ $this->expressionCount ] = "<?php elseif($attribute->value){ ?>";
 			$this->expressionCount++;
 		}
 
@@ -294,6 +298,8 @@ class Template
 				throw new SyntaxError( "Attribute $attribute->name must not be empty", $node->getLineNo() );
 			}
 
+			$this->ValidateExpression( "foreach($attribute->value);", $node->getLineNo() );
+
 			$newNodeFor = $this->DOM->createElement( $this->expressionTag );
 			$newNodeFor->setAttribute( 'c', (string)$this->expressionCount );
 			$newNodeFor->setAttribute( 'type', $attribute->name );
@@ -310,7 +316,7 @@ class Template
 
 			$newNodeFor->appendChild( $node );
 
-			$this->expressions[ $this->expressionCount ] = "<?php foreach({$attribute->value}){ ?>";
+			$this->expressions[ $this->expressionCount ] = "<?php foreach($attribute->value){ ?>";
 			$this->expressionCount++;
 		}
 
@@ -326,6 +332,8 @@ class Template
 
 				continue;
 			}
+
+			$this->ValidateExpression( "$attribute->value;", $node->getLineNo() );
 
 			$attributes[] = new \DOMAttr(
 				\substr( $attribute->name, 1 ),
@@ -391,6 +399,8 @@ class Template
 		$raw = \substr( $mustache->data, 2, -2 ); // todo: mb_?
 		$raw = \trim( $raw );
 
+		$this->ValidateExpression( "$raw;", $node->getLineNo() );
+
 		$newNode = $this->DOM->createElement( $this->expressionTag );
 		$newNode->setAttribute( 'c', (string)$this->expressionCount );
 		$newNode->setAttribute( 'type', 'mustache' );
@@ -407,5 +417,56 @@ class Template
 		$this->expressionCount++;
 
 		$this->HandleMustacheVariables( $remainder );
+	}
+
+	private function ValidateExpression( string $expression, int $line ) : void
+	{
+		try
+		{
+			$tokens = \PhpToken::tokenize( "<?php $expression", TOKEN_PARSE );
+		}
+		catch( \Throwable $e )
+		{
+			throw new SyntaxError( "Expression \"$expression\" failed to parse: {$e->getMessage()}", $line, $e );
+		}
+
+		$disallowedTokens =
+		[
+			T_ATTRIBUTE, // #[
+			T_CLASS, // class
+			T_CLOSE_TAG, // ?\> or %>
+			T_COMMENT, // or #, and /* */
+			T_DECLARE, // declare
+			T_DOC_COMMENT, // /** */
+			T_END_HEREDOC, // heredoc end
+			T_INLINE_HTML, // text outside PHP
+			T_OPEN_TAG_WITH_ECHO, // <?= or <%=
+			T_OPEN_TAG, // <?php, <? or <%
+			T_START_HEREDOC, // <<<
+		];
+
+		foreach( $tokens as $i => $token )
+		{
+			if( $i === 0 )
+			{
+				if( !$token->is( T_OPEN_TAG ) )
+				{
+					throw new SyntaxError( "Expression \"$expression\" was misparsed", $line );
+				}
+
+				continue;
+			}
+
+			if( $token->is( $disallowedTokens ) )
+			{
+				throw new SyntaxError( "Token {$token->getTokenName()} is disallowed in expression \"$expression\"", $line );
+			}
+
+			if( $this->Debug )
+			{
+				echo $token->getTokenName() . ' ';
+				print_r( $token );
+			}
+		}
 	}
 }
