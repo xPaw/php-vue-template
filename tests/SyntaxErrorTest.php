@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-use xPaw\Template\Template;
+use xPaw\Template\Compiler;
 use xPaw\Template\SyntaxError;
 use PHPUnit\Framework\TestCase;
 
@@ -9,7 +9,7 @@ final class SyntaxErrorTest extends TestCase
 {
 	private static function output( string $Input ) : string
 	{
-		$Template = new Template();
+		$Template = new Compiler();
 		$Template->Parse( $Input );
 
 		return $Template->OutputCode();

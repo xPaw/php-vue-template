@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace xPaw\Template;
 
-class Template
+class Compiler
 {
 	private const LIBXML_OPTIONS =
 		\LIBXML_COMPACT | // Activate small nodes allocation optimization.
@@ -144,6 +144,11 @@ class Template
 		//foreach( $parentNode->childNodes as $node )
 		foreach( \iterator_to_array( $parentNode->childNodes ) as $node )
 		{
+			if( $node instanceof \DOMProcessingInstruction )
+			{
+				throw new SyntaxError( "DOMProcessingInstruction is not allowed", $node->getLineNo() );
+			}
+
 			// TODO: Handle DOMComment, it has no splitText
 			if( $node instanceof \DOMText )
 			{
