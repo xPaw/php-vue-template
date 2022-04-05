@@ -41,10 +41,12 @@ class Compiler
 		$this->expressions = [];
 		$this->expressionCount = 0;
 
+		// @codeCoverageIgnoreStart
 		if( $this->Debug )
 		{
 			echo '===== [1]' . PHP_EOL . $Data . PHP_EOL;
 		}
+		// @codeCoverageIgnoreEnd
 
 		$Data = '<?xml encoding="UTF-8">' . $Data;
 
@@ -83,10 +85,12 @@ class Compiler
 
 		$this->DOM->encoding = 'UTF-8';
 
+		// @codeCoverageIgnoreStart
 		if( $this->Debug )
 		{
 			echo '===== [2]' . PHP_EOL . $this->DOM->saveHTML() . PHP_EOL;
 		}
+		// @codeCoverageIgnoreEnd
 
 		$this->HandleNode( $this->DOM );
 	}
@@ -104,10 +108,12 @@ class Compiler
 
 		$code = \rtrim( $code, "\n" ); // todo: why is it outputting a new line?
 
+		// @codeCoverageIgnoreStart
 		if( $this->Debug )
 		{
 			echo '===== [3]' . PHP_EOL . $code . PHP_EOL;
 		}
+		// @codeCoverageIgnoreEnd
 
 		// todo: a way to do this without replaces?
 		/** @var string $code */
@@ -131,10 +137,12 @@ class Compiler
 		$code = str_replace( '</' . $this->expressionTag . '>', '<?php }?>', $code );
 		$code = str_replace( '?><?php', '', $code );
 
+		// @codeCoverageIgnoreStart
 		if( $this->Debug )
 		{
 			echo '===== [4]' . PHP_EOL . $code . PHP_EOL;
 		}
+		// @codeCoverageIgnoreEnd
 
 		return $code;
 	}
@@ -491,7 +499,7 @@ class Compiler
 			T_ATTRIBUTE, // #[
 			T_CLASS, // class
 			T_CLOSE_TAG, // ?\> or %>
-			T_COMMENT, // or #, and /* */
+			T_COMMENT, // // or #, and /* */
 			T_DECLARE, // declare
 			T_DOC_COMMENT, // /** */
 			T_END_HEREDOC, // heredoc end
@@ -518,11 +526,13 @@ class Compiler
 				throw new SyntaxError( "Token {$token->getTokenName()} is disallowed in expression \"$expression\"", $line );
 			}
 
+			// @codeCoverageIgnoreStart
 			if( $this->Debug )
 			{
 				echo $token->getTokenName() . ' ';
 				print_r( $token );
 			}
+			// @codeCoverageIgnoreEnd
 		}
 	}
 }

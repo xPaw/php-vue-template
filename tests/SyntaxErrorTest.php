@@ -110,4 +110,100 @@ final class SyntaxErrorTest extends TestCase
 
 		self::output( '<div>$tag }}</div>' );
 	}
+
+	public function testEmptyMustache(): void
+	{
+		$this->expectException( SyntaxError::class );
+		$this->expectExceptionMessage( 'Mustache tag has no content' );
+
+		self::output( '<div>{{}}</div>' );
+	}
+
+	public function testSpaceMustache(): void
+	{
+		$this->expectException( SyntaxError::class );
+		$this->expectExceptionMessage( 'Expression "echo ;" failed to parse: syntax error, unexpected token ";"' );
+
+		self::output( '<div>{{ }}</div>' );
+	}
+
+	public function testEmptyNoEscapeMustache(): void
+	{
+		$this->expectException( SyntaxError::class );
+		$this->expectExceptionMessage( 'Expression "echo ;" failed to parse: syntax error, unexpected token ";"' );
+
+		self::output( '<div>{{{}}}</div>' );
+	}
+
+	public function testSpaceNoEscapeMustache(): void
+	{
+		$this->expectException( SyntaxError::class );
+		$this->expectExceptionMessage( 'Expression "echo ;" failed to parse: syntax error, unexpected token ";"' );
+
+		self::output( '<div>{{{ }}}</div>' );
+	}
+
+	public function testPhpTag() : void
+	{
+		$this->expectException( SyntaxError::class );
+		$this->expectExceptionMessage( 'DOMProcessingInstruction is not allowed' );
+
+		self::output( '<?php echo "hello"; ?>' );
+	}
+
+	public function testBadPhp() : void
+	{
+		$this->expectException( SyntaxError::class );
+		$this->expectExceptionMessage( 'Expression "echo , "test";" failed to parse: syntax error, unexpected token ","' );
+
+		self::output( '<div>{{ , "test" }}</div>' );
+	}
+
+	public function testPhpNoCloseTag() : void
+	{
+		$this->expectException( SyntaxError::class );
+		$this->expectExceptionMessage( 'Token T_CLOSE_TAG is disallowed in expression "echo 1;?>;' );
+
+		self::output( '<div>{{ 1;?> }}</div>' );
+	}
+
+	public function testPhpNoMultilineComment() : void
+	{
+		$this->expectException( SyntaxError::class );
+		$this->expectExceptionMessage( 'Token T_COMMENT is disallowed in expression "echo 1/* test */;"' );
+
+		self::output( '<div>{{ 1/* test */ }}</div>' );
+	}
+
+	public function testPhpNoComment() : void
+	{
+		$this->expectException( SyntaxError::class );
+		$this->expectExceptionMessage( "Token T_COMMENT is disallowed in expression \"echo 1//\n;;\"" );
+
+		self::output( "<div>{{ 1//\n; }}</div>" );
+	}
+
+	public function testPhpNoClass() : void
+	{
+		$this->expectException( SyntaxError::class );
+		$this->expectExceptionMessage( 'Token T_CLASS is disallowed in expression "class HelloWorld {};' );
+
+		self::output( '<div>{{= class HelloWorld {} }}</div>' );
+	}
+
+	public function testPhpNoDeclare() : void
+	{
+		$this->expectException( SyntaxError::class );
+		$this->expectExceptionMessage( 'Token T_DECLARE is disallowed in expression "declare(strict_types=1);' );
+
+		self::output( '<div>{{= declare(strict_types=1) }}</div>' );
+	}
+
+	public function testPhpNoAttribute() : void
+	{
+		$this->expectException( SyntaxError::class );
+		$this->expectExceptionMessage( 'Token T_ATTRIBUTE is disallowed in expression "#[HelloWorld] class HelloWorld {};' );
+
+		self::output( '<div>{{= #[HelloWorld] class HelloWorld {} }}</div>' );
+	}
 }
