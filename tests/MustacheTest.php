@@ -20,6 +20,11 @@ final class MustacheTest extends TestCase
 		$this->assertEquals( '<span><?php { echo \htmlspecialchars($hello, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\');  }?></span>', self::output( '<span>{{$hello}}</span>' ) );
 	}
 
+	public function testEmoji(): void
+	{
+		$this->assertEquals( '<span><?php { echo \htmlspecialchars("🤣🤣", \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\');  }?></span>', self::output( '<span>{{ "🤣🤣" }}</span>' ) );
+	}
+
 	public function testBasicMustacheNoEscape(): void
 	{
 		$this->assertEquals( '<span><?php { echo $hello;  }?></span>', self::output( '<span>{{{$hello}}}</span>' ) );

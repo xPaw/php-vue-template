@@ -68,7 +68,7 @@ class Compiler
 			throw new \Exception( 'loadHTML call failed' ); // todo: better message
 		}
 
-		if( !empty( $errors ) )
+		if( $this->Debug && !empty( $errors ) )
 		{
 			print_r( $errors );
 		}
@@ -214,9 +214,14 @@ class Compiler
 				throw new SyntaxError( "Do not put $name on the same element that already has {$newNode->getAttribute( 'type' )}", $node->getLineNo() );
 			}
 
+			if( !( $node->previousSibling instanceof \DOMElement ) )
+			{
+				throw new SyntaxError( 'Previous sibling must be a DOM element', $node->getLineNo() );
+			}
+
 			$previousExpressionType = null;
 
-			if( $node->previousSibling?->tagName === $this->expressionTag )
+			if( $node->previousSibling->tagName === $this->expressionTag )
 			{
 				$previousExpressionType = $node->previousSibling->getAttribute( 'type' );
 			}
@@ -415,19 +420,26 @@ class Compiler
 			return;
 		}
 
-		if( $end === -1 )
+		if( $end === -1 || $bracketsOpen > 0 )
 		{
 			throw new SyntaxError( "Opening mustache tag at position $start, but it was never closed", $node->getLineNo() );
 		}
 
-		$mustache = $node->splitText( $start );
-		$remainder = $mustache->splitText( $end - $start );
-		$length = \strlen( $mustache->data );
+		$mustache = $node->splitText( self::CharacterOffset( $node->data, $start ) );
 
-		if( $length < 5 )
+		if( $mustache === false )
 		{
-			throw new SyntaxError( "Mustache tag has no content", $node->getLineNo() );
+			throw new SyntaxError( "DOMText->splitText failed", $node->getLineNo() );
 		}
+
+		$remainder = $mustache->splitText( self::CharacterOffset( $mustache->data, $end - $start ) );
+
+		if( $remainder === false )
+		{
+			throw new SyntaxError( "DOMText->splitText failed", $node->getLineNo() );
+		}
+
+		$length = \strlen( $mustache->data );
 
 		$modifier = $mustache->data[ 2 ];
 		$noEcho = false;
@@ -534,5 +546,11 @@ class Compiler
 			}
 			// @codeCoverageIgnoreEnd
 		}
+	}
+
+	private static function CharacterOffset( string $string, int $byteOffset ) : int
+	{
+		$substr = \substr( $string, 0, $byteOffset );
+		return \mb_strlen( $substr );
 	}
 }

@@ -36,7 +36,7 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'Previous sibling element must have v-if or v-else-if' );
 
-		self::output( '<div v-else></div>' );
+		self::output( '<div></div><div v-else></div>' );
 	}
 
 	public function testElseIfNoIf(): void
@@ -44,7 +44,15 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'Previous sibling element must have v-if or v-else-if' );
 
-		self::output( '<div v-else-if="$test"></div>' );
+		self::output( '<div></div><div v-else-if="$test"></div>' );
+	}
+
+	public function testElseIfNoIfElement(): void
+	{
+		$this->expectException( SyntaxError::class );
+		$this->expectExceptionMessage( 'Previous sibling must be a DOM element' );
+
+		self::output( '<div>test<div v-else-if="$test"></div></div>' );
 	}
 
 	public function testIfNoCondition(): void
@@ -114,7 +122,7 @@ final class SyntaxErrorTest extends TestCase
 	public function testEmptyMustache(): void
 	{
 		$this->expectException( SyntaxError::class );
-		$this->expectExceptionMessage( 'Mustache tag has no content' );
+		$this->expectExceptionMessage( 'Expression "echo ;" failed to parse: syntax error, unexpected token ";"' );
 
 		self::output( '<div>{{}}</div>' );
 	}
