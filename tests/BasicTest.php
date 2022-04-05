@@ -36,11 +36,6 @@ final class BasicTest extends TestCase
 		$this->assertEquals( '<div><p>Hello</p></div>', self::output( '<div><p>Hello' ) );
 	}
 
-	public function testBasicMustache(): void
-	{
-		$this->assertEquals( '<span><?php { echo \htmlspecialchars($hello, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\');  }?></span>', self::output( '<span>{{ $hello }}</span>' ) );
-	}
-
 	public function testIf(): void
 	{
 		$this->assertEquals(

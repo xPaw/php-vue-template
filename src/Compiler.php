@@ -359,6 +359,7 @@ class Compiler
 	private function HandleMustacheVariables( \DOMText $node ) : void
 	{
 		$length = \strlen( $node->data ); // todo: does this need to use mb_ functions?
+		$bracketsOpen = 0;
 		$isOpen = false;
 		$start = -1;
 		$end = -1;
@@ -368,8 +369,15 @@ class Compiler
 			// todo: support escaping
 			if( $node->data[ $i ] === '{' && $node->data[ $i + 1 ] === '{' )
 			{
+				$bracketsOpen++;
+
 				if( $isOpen )
 				{
+					if( $i === $start + 1 ) // continuation
+					{
+						continue;
+					}
+
 					throw new SyntaxError( "Opening mustache tag at position $i, but a tag was already open at position $start", $node->getLineNo() );
 				}
 
@@ -385,7 +393,12 @@ class Compiler
 				}
 
 				$end = $i + 2;
-				break;
+				$bracketsOpen--;
+
+				if( $bracketsOpen === 0 )
+				{
+					break;
+				}
 			}
 		}
 
@@ -401,10 +414,36 @@ class Compiler
 
 		$mustache = $node->splitText( $start );
 		$remainder = $mustache->splitText( $end - $start );
-		$raw = \substr( $mustache->data, 2, -2 ); // todo: mb_?
+		$length = \strlen( $mustache->data );
+
+		if( $length < 5 )
+		{
+			throw new SyntaxError( "Mustache tag has no content", $node->getLineNo() );
+		}
+
+		$modifier = $mustache->data[ 2 ];
+		$noEcho = false;
+		$noEscape = false;
+
+		// todo: mb_?
+		if( $modifier === '=' )
+		{
+			$noEcho = true;
+			$raw = \substr( $mustache->data, 3, -2 );
+		}
+		else if( $modifier === '{' && $mustache->data[ $length - 2 ] === '}' )
+		{
+			$noEscape = true;
+			$raw = \substr( $mustache->data, 3, -3 );
+		}
+		else
+		{
+			$raw = \substr( $mustache->data, 2, -2 );
+		}
+
 		$raw = \trim( $raw );
 
-		$this->ValidateExpression( "$raw;", $node->getLineNo() );
+		$this->ValidateExpression( $noEcho ? "$raw;" : "echo $raw;", $node->getLineNo() );
 
 		$newNode = $this->DOM->createElement( $this->expressionTag );
 		$newNode->setAttribute( 'c', (string)$this->expressionCount );
@@ -417,8 +456,20 @@ class Compiler
 
 		$mustache->parentNode->replaceChild( $newNode, $mustache );
 
-		// todo: unsafe output without htmlspecialchars
-		$this->expressions[ $this->expressionCount ] = "<?php { echo \htmlspecialchars($raw, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, 'UTF-8'); ?>";
+		// todo: create our own safe function which will handle ints, and accept file/line context for exceptions
+		if( $noEcho )
+		{
+			$this->expressions[ $this->expressionCount ] = "<?php { $raw; ?>";
+		}
+		else if( $noEscape )
+		{
+			$this->expressions[ $this->expressionCount ] = "<?php { echo $raw; ?>";
+		}
+		else
+		{
+			$this->expressions[ $this->expressionCount ] = "<?php { echo \htmlspecialchars($raw, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, 'UTF-8'); ?>";
+		}
+
 		$this->expressionCount++;
 
 		$this->HandleMustacheVariables( $remainder );
