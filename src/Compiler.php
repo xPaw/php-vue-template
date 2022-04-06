@@ -65,7 +65,7 @@ class Compiler
 
 		if( $loadResult === false )
 		{
-			throw new \Exception( 'loadHTML call failed' ); // todo: better message
+			throw new \AssertionError( 'loadHTML call failed' ); // todo: better message
 		}
 
 		if( $this->Debug && !empty( $errors ) )
@@ -103,7 +103,7 @@ class Compiler
 
 		if( $code === false )
 		{
-			throw new \Exception( 'saveHTML call failed' ); // todo: better message
+			throw new \AssertionError( 'saveHTML call failed' ); // todo: better message
 		}
 
 		$code = \rtrim( $code, "\n" ); // todo: why is it outputting a new line?
@@ -131,7 +131,7 @@ class Compiler
 
 		if( $code === null )
 		{
-			throw new \Exception( 'preg_replace_callback call failed' ); // todo: better message
+			throw new \AssertionError( 'preg_replace_callback call failed' ); // todo: better message
 		}
 
 		$code = str_replace( '</' . $this->expressionTag . '>', '<?php }?>', $code );
@@ -199,7 +199,7 @@ class Compiler
 	{
 		if( $node->parentNode === null || $node->attributes === null )
 		{
-			throw new \Exception( 'This should never happen.' );
+			throw new \AssertionError( 'This should never happen.' );
 		}
 
 		/** @var \DOMAttr[] $attributes */
@@ -429,14 +429,14 @@ class Compiler
 
 		if( $mustache === false )
 		{
-			throw new SyntaxError( "DOMText->splitText failed", $node->getLineNo() );
+			throw new \AssertionError( 'DOMText->splitText failed' );
 		}
 
 		$remainder = $mustache->splitText( self::CharacterOffset( $mustache->data, $end - $start ) );
 
 		if( $remainder === false )
 		{
-			throw new SyntaxError( "DOMText->splitText failed", $node->getLineNo() );
+			throw new \AssertionError( 'DOMText->splitText failed' );
 		}
 
 		$length = \strlen( $mustache->data );
@@ -471,7 +471,7 @@ class Compiler
 
 		if( $mustache->parentNode === null )
 		{
-			throw new \Exception( 'mustache->parentNode is null' ); // todo: better message
+			throw new \AssertionError( 'mustache->parentNode is null' ); // todo: better message
 		}
 
 		$mustache->parentNode->replaceChild( $newNode, $mustache );
