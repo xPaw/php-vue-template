@@ -159,7 +159,6 @@ class Compiler
 			}
 
 			// TODO: Handle DOMComment, it has no splitText
-			// TODO: Handle CDATA elements
 			if( $node instanceof \DOMText )
 			{
 				$this->HandleMustacheVariables( $node );

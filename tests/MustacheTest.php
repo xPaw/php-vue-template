@@ -44,4 +44,16 @@ final class MustacheTest extends TestCase
 			self::output( '<span>hello {{{$a}}} some text {{{$b}}} ending</span>' )
 		);
 	}
+
+	public function testCdata(): void
+	{
+		$this->assertEquals(
+			'<script type="text/javascript">var t = <?php { echo \htmlspecialchars($type, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\');  }?>;</script>',
+			self::output( '<script type="text/javascript">var t = {{ $type }};</script>' )
+		);
+		$this->assertEquals(
+			'<script type="text/javascript"><![CDATA[var t = <?php { echo \htmlspecialchars($type, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\');  }?>;]]></script>',
+			self::output( '<script type="text/javascript"><![CDATA[var t = {{ $type }};]]></script>' )
+		);
+	}
 }
