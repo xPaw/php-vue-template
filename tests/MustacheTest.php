@@ -36,4 +36,12 @@ final class MustacheTest extends TestCase
 		$this->assertEquals( '<span><?php { $hello;  }?></span>', self::output( '<span>{{=$hello}}</span>' ) );
 		$this->assertEquals( '<span><?php { $hello;  }?></span>', self::output( '<span>{{= $hello }}</span>' ) );
 	}
+
+	public function testMultipleMustachesInSameTextNode(): void
+	{
+		$this->assertEquals(
+			'<span>hello <?php { echo $hello;  }?> some text <?php { echo $hello;  }?> ending</span>',
+			self::output( '<span>hello {{{$hello}}} some text {{{$hello}}} ending</span>' )
+		);
+	}
 }

@@ -371,6 +371,11 @@ class Compiler
 
 	private function HandleMustacheVariables( \DOMText $node ) : void
 	{
+		if( $node->parentNode === null )
+		{
+			throw new \AssertionError( 'node->parentNode is null' ); // todo: better message
+		}
+
 		$length = \strlen( $node->data ); // todo: does this need to use mb_ functions?
 		$bracketsOpen = 0;
 		$isOpen = false;
@@ -425,23 +430,25 @@ class Compiler
 			throw new SyntaxError( "Opening mustache tag at position $start, but it was never closed", $node->getLineNo() );
 		}
 
-		$mustache = $node->splitText( self::CharacterOffset( $node->data, $start ) );
+		// Split the text into start, mustache itself, and remainder
+		$mustache = \substr( $node->data, $start, $end - $start );
 
-		if( $mustache === false )
-		{
-			throw new \AssertionError( 'DOMText->splitText failed' );
-		}
+		// todo: check strlen and $end
+		$remainder = new \DOMText( \substr( $node->data, $end ) );
 
-		$remainder = $mustache->splitText( self::CharacterOffset( $mustache->data, $end - $start ) );
+		// Truncate the text until the mustache
+		$node->data = \substr( $node->data, 0, $start );
 
-		if( $remainder === false )
-		{
-			throw new \AssertionError( 'DOMText->splitText failed' );
-		}
+		// Create new tag for the mustache
+		$newNode = $this->DOM->createElement( $this->expressionTag );
+		$newNode->setAttribute( 'c', (string)$this->expressionCount );
+		$newNode->setAttribute( 'type', 'mustache' );
 
-		$length = \strlen( $mustache->data );
+		// Insert the new mustache element and the remaining text
+		$node->parentNode->insertBefore( $newNode, $node->nextSibling );
+		$node->parentNode->insertBefore( $remainder, $newNode->nextSibling );
 
-		$modifier = $mustache->data[ 2 ];
+		$modifier = $mustache[ 2 ];
 		$noEcho = false;
 		$noEscape = false;
 
@@ -449,32 +456,21 @@ class Compiler
 		if( $modifier === '=' )
 		{
 			$noEcho = true;
-			$raw = \substr( $mustache->data, 3, -2 );
+			$raw = \substr( $mustache, 3, -2 );
 		}
-		else if( $modifier === '{' && $mustache->data[ $length - 2 ] === '}' )
+		else if( $modifier === '{' && $mustache[ \strlen( $mustache ) - 2 ] === '}' )
 		{
 			$noEscape = true;
-			$raw = \substr( $mustache->data, 3, -3 );
+			$raw = \substr( $mustache, 3, -3 );
 		}
 		else
 		{
-			$raw = \substr( $mustache->data, 2, -2 );
+			$raw = \substr( $mustache, 2, -2 );
 		}
 
 		$raw = \trim( $raw );
 
 		$this->ValidateExpression( $noEcho ? "$raw;" : "echo $raw;", $node->getLineNo() );
-
-		$newNode = $this->DOM->createElement( $this->expressionTag );
-		$newNode->setAttribute( 'c', (string)$this->expressionCount );
-		$newNode->setAttribute( 'type', 'mustache' );
-
-		if( $mustache->parentNode === null )
-		{
-			throw new \AssertionError( 'mustache->parentNode is null' ); // todo: better message
-		}
-
-		$mustache->parentNode->replaceChild( $newNode, $mustache );
 
 		// todo: create our own safe function which will handle ints, and accept file/line context for exceptions
 		if( $noEcho )
@@ -546,11 +542,5 @@ class Compiler
 			}
 			// @codeCoverageIgnoreEnd
 		}
-	}
-
-	private static function CharacterOffset( string $string, int $byteOffset ) : int
-	{
-		$substr = \substr( $string, 0, $byteOffset );
-		return \mb_strlen( $substr );
 	}
 }
