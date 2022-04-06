@@ -149,7 +149,8 @@ class Compiler
 
 	private function HandleNode( \DOMNode $parentNode ) : void
 	{
-		//foreach( $parentNode->childNodes as $node )
+		// Use iterator_to_array to iterate over the current children state
+		// as the functions will modify the children
 		foreach( \iterator_to_array( $parentNode->childNodes ) as $node )
 		{
 			if( $node instanceof \DOMProcessingInstruction )
@@ -158,6 +159,7 @@ class Compiler
 			}
 
 			// TODO: Handle DOMComment, it has no splitText
+			// TODO: Handle CDATA elements
 			if( $node instanceof \DOMText )
 			{
 				$this->HandleMustacheVariables( $node );
@@ -376,7 +378,7 @@ class Compiler
 			throw new \AssertionError( 'node->parentNode is null' ); // todo: better message
 		}
 
-		$length = \strlen( $node->data ); // todo: does this need to use mb_ functions?
+		$length = \strlen( $node->data );
 		$bracketsOpen = 0;
 		$isOpen = false;
 		$start = -1;
@@ -430,29 +432,31 @@ class Compiler
 			throw new SyntaxError( "Opening mustache tag at position $start, but it was never closed", $node->getLineNo() );
 		}
 
-		// Split the text into start, mustache itself, and remainder
+		// Split the text into beginning, mustache itself, and remainder
 		$mustache = \substr( $node->data, $start, $end - $start );
-
-		// todo: check strlen and $end
-		$remainder = new \DOMText( \substr( $node->data, $end ) );
-
-		// Truncate the text until the mustache
-		$node->data = \substr( $node->data, 0, $start );
 
 		// Create new tag for the mustache
 		$newNode = $this->DOM->createElement( $this->expressionTag );
 		$newNode->setAttribute( 'c', (string)$this->expressionCount );
 		$newNode->setAttribute( 'type', 'mustache' );
-
-		// Insert the new mustache element and the remaining text
 		$node->parentNode->insertBefore( $newNode, $node->nextSibling );
-		$node->parentNode->insertBefore( $remainder, $newNode->nextSibling );
+
+		// Remaining text after the mustache if any
+		$remainder = null;
+
+		if( $length > $end )
+		{
+			$remainder = new \DOMText( \substr( $node->data, $end ) );
+			$node->parentNode->insertBefore( $remainder, $newNode->nextSibling );
+		}
+
+		// Truncate the beginning text until the mustache
+		$node->data = \substr( $node->data, 0, $start );
 
 		$modifier = $mustache[ 2 ];
 		$noEcho = false;
 		$noEscape = false;
 
-		// todo: mb_?
 		if( $modifier === '=' )
 		{
 			$noEcho = true;
@@ -472,7 +476,6 @@ class Compiler
 
 		$this->ValidateExpression( $noEcho ? "$raw;" : "echo $raw;", $node->getLineNo() );
 
-		// todo: create our own safe function which will handle ints, and accept file/line context for exceptions
 		if( $noEcho )
 		{
 			$this->expressions[ $this->expressionCount ] = "<?php { $raw; ?>";
@@ -483,12 +486,16 @@ class Compiler
 		}
 		else
 		{
+			// todo: create our own safe function which will handle ints, and accept file/line context for exceptions
 			$this->expressions[ $this->expressionCount ] = "<?php { echo \htmlspecialchars($raw, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, 'UTF-8'); ?>";
 		}
 
 		$this->expressionCount++;
 
-		$this->HandleMustacheVariables( $remainder );
+		if( $remainder !== null )
+		{
+			$this->HandleMustacheVariables( $remainder );
+		}
 	}
 
 	private function ValidateExpression( string $expression, int $line ) : void
