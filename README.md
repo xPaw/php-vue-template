@@ -1,5 +1,7 @@
 This is an unfinished PHP templating system which takes inspiration from Vue.
 
+Attribute values, directives, and text interpolation accept PHP expressions.
+
 For example:
 ```html
 <div v-if="$type === 'B'">
