@@ -7,7 +7,7 @@ use PHPUnit\Framework\TestCase;
 
 final class SyntaxErrorTest extends TestCase
 {
-	private static function output( string $Input ) : string
+	private static function code( string $Input ) : string
 	{
 		$Template = new Compiler();
 		$Template->Parse( $Input );
@@ -20,7 +20,7 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'Do not put v-else on the same element that already has v-if' );
 
-		self::output( '<div v-if="$test" v-else></div>' );
+		self::code( '<div v-if="$test" v-else></div>' );
 	}
 
 	public function testIfElseIf(): void
@@ -28,7 +28,7 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'Do not put v-else-if on the same element that already has v-if' );
 
-		self::output( '<div v-if="$test" v-else-if="$test"></div>' );
+		self::code( '<div v-if="$test" v-else-if="$test"></div>' );
 	}
 
 	public function testElseNoIf(): void
@@ -36,7 +36,7 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'Previous sibling element must have v-if or v-else-if' );
 
-		self::output( '<div></div><div v-else></div>' );
+		self::code( '<div></div><div v-else></div>' );
 	}
 
 	public function testElseIfNoIf(): void
@@ -44,7 +44,7 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'Previous sibling element must have v-if or v-else-if' );
 
-		self::output( '<div></div><div v-else-if="$test"></div>' );
+		self::code( '<div></div><div v-else-if="$test"></div>' );
 	}
 
 	public function testElseIfNoIfElement(): void
@@ -52,7 +52,7 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'Previous sibling must be a DOM element' );
 
-		self::output( '<div>test<div v-else-if="$test"></div></div>' );
+		self::code( '<div>test<div v-else-if="$test"></div></div>' );
 	}
 
 	public function testIfNoCondition(): void
@@ -60,7 +60,7 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'Attribute v-if must not be empty' );
 
-		self::output( '<div v-if></div>' );
+		self::code( '<div v-if></div>' );
 	}
 
 	public function testElseIfNoCondition(): void
@@ -68,7 +68,7 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'Attribute v-else-if must not be empty' );
 
-		self::output( '<div v-else-if></div>' );
+		self::code( '<div v-else-if></div>' );
 	}
 
 	public function testForNoCondition(): void
@@ -76,7 +76,7 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'Attribute v-for must not be empty' );
 
-		self::output( '<div v-for></div>' );
+		self::code( '<div v-for></div>' );
 	}
 
 	public function testElseCondition(): void
@@ -84,7 +84,7 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'Attribute v-else must be empty' );
 
-		self::output( '<div v-else="$test"></div>' );
+		self::code( '<div v-else="$test"></div>' );
 	}
 
 	public function testPreCondition(): void
@@ -92,7 +92,7 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'Attribute v-pre must be empty' );
 
-		self::output( '<div v-pre="$test"></div>' );
+		self::code( '<div v-pre="$test"></div>' );
 	}
 
 	public function testNestedMustache(): void
@@ -100,7 +100,7 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'Opening mustache tag at position 3, but a tag was already open at position 0' );
 
-		self::output( '<div>{{ {{ $tag }} }}</div>' );
+		self::code( '<div>{{ {{ $tag }} }}</div>' );
 	}
 
 	public function testUnclosedMustache(): void
@@ -108,7 +108,7 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'Opening mustache tag at position 0, but it was never closed' );
 
-		self::output( '<div>{{ $tag</div>' );
+		self::code( '<div>{{ $tag</div>' );
 	}
 
 	public function testUnopenedMustache(): void
@@ -116,7 +116,7 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'Closing mustache tag at position 5, but it was never opened' );
 
-		self::output( '<div>$tag }}</div>' );
+		self::code( '<div>$tag }}</div>' );
 	}
 
 	public function testEmptyMustache(): void
@@ -124,7 +124,7 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'Expression "echo ;" failed to parse: syntax error, unexpected token ";"' );
 
-		self::output( '<div>{{}}</div>' );
+		self::code( '<div>{{}}</div>' );
 	}
 
 	public function testSpaceMustache(): void
@@ -132,7 +132,7 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'Expression "echo ;" failed to parse: syntax error, unexpected token ";"' );
 
-		self::output( '<div>{{ }}</div>' );
+		self::code( '<div>{{ }}</div>' );
 	}
 
 	public function testEmptyNoEscapeMustache(): void
@@ -140,7 +140,7 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'Expression "echo ;" failed to parse: syntax error, unexpected token ";"' );
 
-		self::output( '<div>{{{}}}</div>' );
+		self::code( '<div>{{{}}}</div>' );
 	}
 
 	public function testSpaceNoEscapeMustache(): void
@@ -148,7 +148,7 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'Expression "echo ;" failed to parse: syntax error, unexpected token ";"' );
 
-		self::output( '<div>{{{ }}}</div>' );
+		self::code( '<div>{{{ }}}</div>' );
 	}
 
 	public function testPhpTag() : void
@@ -156,7 +156,7 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'DOMProcessingInstruction is not allowed' );
 
-		self::output( '<?php echo "hello"; ?>' );
+		self::code( '<?php echo "hello"; ?>' );
 	}
 
 	public function testBadPhp() : void
@@ -164,7 +164,7 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'Expression "echo , "test";" failed to parse: syntax error, unexpected token ","' );
 
-		self::output( '<div>{{ , "test" }}</div>' );
+		self::code( '<div>{{ , "test" }}</div>' );
 	}
 
 	public function testPhpNoCloseTag() : void
@@ -172,7 +172,7 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'Token T_CLOSE_TAG is disallowed in expression "echo 1;?>;' );
 
-		self::output( '<div>{{ 1;?> }}</div>' );
+		self::code( '<div>{{ 1;?> }}</div>' );
 	}
 
 	public function testPhpNoMultilineComment() : void
@@ -180,7 +180,7 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'Token T_COMMENT is disallowed in expression "echo 1/* test */;"' );
 
-		self::output( '<div>{{ 1/* test */ }}</div>' );
+		self::code( '<div>{{ 1/* test */ }}</div>' );
 	}
 
 	public function testPhpNoComment() : void
@@ -188,7 +188,7 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( "Token T_COMMENT is disallowed in expression \"echo 1//\n;;\"" );
 
-		self::output( "<div>{{ 1//\n; }}</div>" );
+		self::code( "<div>{{ 1//\n; }}</div>" );
 	}
 
 	public function testPhpNoClass() : void
@@ -196,7 +196,7 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'Token T_CLASS is disallowed in expression "class HelloWorld {};' );
 
-		self::output( '<div>{{= class HelloWorld {} }}</div>' );
+		self::code( '<div>{{= class HelloWorld {} }}</div>' );
 	}
 
 	public function testPhpNoDeclare() : void
@@ -204,7 +204,7 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'Token T_DECLARE is disallowed in expression "declare(strict_types=1);' );
 
-		self::output( '<div>{{= declare(strict_types=1) }}</div>' );
+		self::code( '<div>{{= declare(strict_types=1) }}</div>' );
 	}
 
 	public function testPhpNoAttribute() : void
@@ -212,6 +212,6 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'Token T_ATTRIBUTE is disallowed in expression "#[HelloWorld] class HelloWorld {};' );
 
-		self::output( '<div>{{= #[HelloWorld] class HelloWorld {} }}</div>' );
+		self::code( '<div>{{= #[HelloWorld] class HelloWorld {} }}</div>' );
 	}
 }
