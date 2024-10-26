@@ -80,7 +80,6 @@ class Compiler
 
 	public function OutputCode() : string
 	{
-		// todo: this adds <p> wrapper for text without elements
 		// todo: this turns <div /> into <div></div>
 		$code = $this->DOM->saveHTML();
 
