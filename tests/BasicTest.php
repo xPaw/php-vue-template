@@ -39,7 +39,7 @@ final class BasicTest extends TestCase
 	public function testIf(): void
 	{
 		$this->assertEquals(
-			'<?php if($test === 123){ ?><span>hello</span><?php }?>',
+			'<?php if($test === 123){?><span>hello</span><?php }?>',
 			self::code( '<span v-if="$test === 123">hello</span>' )
 		);
 	}
@@ -47,7 +47,7 @@ final class BasicTest extends TestCase
 	public function testElseIf(): void
 	{
 		$this->assertEquals(
-			'<test><?php if($test === 123){ ?><span>hello</span><?php } elseif($test === 456){ ?><span>world</span><?php }?></test>',
+			'<test><?php if($test === 123){?><span>hello</span><?php }elseif($test === 456){?><span>world</span><?php }?></test>',
 			self::code( '<test><span v-if="$test === 123">hello</span><span v-else-if="$test === 456">world</span></test>' )
 		);
 	}
@@ -55,7 +55,7 @@ final class BasicTest extends TestCase
 	public function testElse(): void
 	{
 		$this->assertEquals(
-			'<test><?php if($test === 123){ ?><span>hello</span><?php } else{ ?><span>world</span><?php }?></test>',
+			'<test><?php if($test === 123){?><span>hello</span><?php }else{?><span>world</span><?php }?></test>',
 			self::code( '<test><span v-if="$test === 123">hello</span><span v-else>world</span></test>' )
 		);
 	}
@@ -63,7 +63,7 @@ final class BasicTest extends TestCase
 	public function testElseIfElse(): void
 	{
 		$this->assertEquals(
-			'<test><?php if($test === 123){ ?><span>hello</span><?php } if($test === 456){ ?><span>world</span><?php } else{ ?><span>sailor</span><?php }?></test>',
+			'<test><?php if($test === 123){?><span>hello</span><?php }if($test === 456){?><span>world</span><?php }else{?><span>sailor</span><?php }?></test>',
 			self::code( '<test><span v-if="$test === 123">hello</span><span v-if="$test === 456">world</span><span v-else>sailor</span></test>' )
 		);
 	}
@@ -72,7 +72,7 @@ final class BasicTest extends TestCase
 	{
 		// TODO: Adds value v-else=""
 		$this->assertEquals(
-			'<test><?php if($test === 123){ ?><div>hello<span v-if="$test === 456">world</span><span v-else="">{{ $mustache }}</span></div><?php }?></test>',
+			'<test><?php if($test === 123){?><div>hello<span v-if="$test === 456">world</span><span v-else="">{{ $mustache }}</span></div><?php }?></test>',
 			self::code( '<test><div v-if="$test === 123" v-pre>hello<span v-if="$test === 456">world</span><span v-else>{{ $mustache }}</span></div></test>' )
 		);
 	}
@@ -80,7 +80,7 @@ final class BasicTest extends TestCase
 	public function testFor(): void
 	{
 		$this->assertEquals(
-			'<?php foreach($array as $value){ ?><li>text</li><?php }?>',
+			'<?php foreach($array as $value){?><li>text</li><?php }?>',
 			self::code( '<li v-for="$array as $value">text</li>' )
 		);
 	}
@@ -88,7 +88,7 @@ final class BasicTest extends TestCase
 	public function testIfFor(): void
 	{
 		$this->assertEquals(
-			'<?php if($test === 123){  foreach($array as $key => $value){ ?><span>hello</span><?php } }?>',
+			'<?php if($test === 123){foreach($array as $key => $value){?><span>hello</span><?php } }?>',
 			self::code( '<span v-if="$test === 123" v-for="$array as $key => $value">hello</span>' )
 		);
 	}

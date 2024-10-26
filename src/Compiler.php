@@ -21,13 +21,13 @@ class Compiler
 	/** @var array<int, string> */
 	private array $expressions = [];
 	private int $expressionCount = 0;
-	private string $expressionTag = 'php-expression-';
+	private string $expressionTag = 'PHP-EXPRESSION-';
 
 	public bool $Debug = false;
 
 	public function __construct()
 	{
-		$this->expressionTag .= bin2hex( random_bytes( 6 ) );
+		$this->expressionTag .= \strtoupper( \bin2hex( \random_bytes( 6 ) ) );
 	}
 
 	public function Parse( string $Data ) : void
@@ -80,6 +80,8 @@ class Compiler
 
 	public function OutputCode() : string
 	{
+		$this->InsertExpressions( $this->DOM );
+
 		// todo: this turns <div /> into <div></div>
 		$code = $this->DOM->saveHTML();
 
@@ -97,27 +99,13 @@ class Compiler
 		}
 		// @codeCoverageIgnoreEnd
 
-		// todo: a way to do this without replaces?
-		/** @var string $code */
-		$code = preg_replace_callback(
-			'/<' . $this->expressionTag . ' c="(?<id>[0-9]+)" type="[a-z\-]+">/s',
-			fn( array $matches ) : string => $this->expressions[ (int)$matches[ 'id' ] ],
-			$code
-		);
-
-		$code = preg_replace_callback(
-			'/' . $this->expressionTag . '_ATTR_(?<id>[0-9]+)/s',
-			fn( array $matches ) : string => $this->expressions[ (int)$matches[ 'id' ] ],
-			$code
-		);
-
 		if( $code === null )
 		{
 			throw new \AssertionError( 'preg_replace_callback call failed' ); // todo: better message
 		}
 
-		$code = str_replace( '</' . $this->expressionTag . '>', '<?php }?>', $code );
-		$code = str_replace( '?><?php', '', $code );
+		//$code = str_replace( '</' . $this->expressionTag . '>', '<?php }? >', $code );
+		$code = str_replace( '?><?php ', '', $code );
 
 		// @codeCoverageIgnoreStart
 		if( $this->Debug )
@@ -127,6 +115,45 @@ class Compiler
 		// @codeCoverageIgnoreEnd
 
 		return $code;
+	}
+
+	private function InsertExpressions( \Dom\Node $parentNode ) : void
+	{
+		// Use iterator_to_array to iterate over the current children state
+		// as the functions will modify the children
+		foreach( \iterator_to_array( $parentNode->childNodes ) as $node )
+		{
+			if( !( $node instanceof \Dom\HTMLElement ) )
+			{
+				continue;
+			}
+
+			if( $node->tagName === $this->expressionTag )
+			{
+				$expressionId = $node->getAttribute( 'c' );
+				$expression = $this->expressions[ $expressionId ] . '?';
+
+				if( !\str_starts_with( $expression, 'if' ) && !\str_starts_with( $expression, 'else' ) )
+				{
+					$expression = '{' . $expression;
+				}
+
+				$instruction = $this->DOM->createProcessingInstruction( 'php', $expression );
+				$node->parentNode->insertBefore( $instruction, $node );
+
+				foreach( $node->childNodes as $childNode )
+				{
+					$node->parentNode->insertBefore( $childNode, $node );
+				}
+
+				$instruction = $this->DOM->createProcessingInstruction( 'php', '}?' );
+				$node->parentNode->insertBefore( $instruction, $node );
+
+				$node->remove();
+			}
+
+			$this->InsertExpressions( $node );
+		}
 	}
 
 	private function HandleNode( \Dom\Node $parentNode ) : void
@@ -204,8 +231,7 @@ class Compiler
 
 			$previousExpressionType = null;
 
-			// TODO: Silly uppercase
-			if( $node->previousSibling->tagName === \strtoupper( $this->expressionTag ) )
+			if( $node->previousSibling->tagName === $this->expressionTag )
 			{
 				$previousExpressionType = $node->previousSibling->getAttribute( 'type' );
 			}
@@ -235,7 +261,7 @@ class Compiler
 			$node->parentNode->replaceChild( $newNode, $node );
 			$newNode->appendChild( $node );
 
-			$this->expressions[ $this->expressionCount ] = "<?php if($attribute->value){ ?>";
+			$this->expressions[ $this->expressionCount ] = "if($attribute->value){";
 			$this->expressionCount++;
 		}
 
@@ -261,7 +287,7 @@ class Compiler
 			$node->parentNode->replaceChild( $newNode, $node );
 			$newNode->appendChild( $node );
 
-			$this->expressions[ $this->expressionCount ] = "<?php elseif($attribute->value){ ?>";
+			$this->expressions[ $this->expressionCount ] = "elseif($attribute->value){";
 			$this->expressionCount++;
 		}
 
@@ -285,7 +311,7 @@ class Compiler
 			$node->parentNode->replaceChild( $newNode, $node );
 			$newNode->appendChild( $node );
 
-			$this->expressions[ $this->expressionCount ] = "<?php else{ ?>";
+			$this->expressions[ $this->expressionCount ] = "else{";
 			$this->expressionCount++;
 		}
 
@@ -318,7 +344,7 @@ class Compiler
 
 			$newNodeFor->appendChild( $node );
 
-			$this->expressions[ $this->expressionCount ] = "<?php foreach($attribute->value){ ?>";
+			$this->expressions[ $this->expressionCount ] = "foreach($attribute->value){";
 			$this->expressionCount++;
 		}
 
@@ -338,11 +364,8 @@ class Compiler
 			$this->ValidateExpression( "$attribute->value;", $node->getLineNo() );
 
 			$newAttribute = $this->DOM->createAttribute( \substr( $attribute->name, 1 ) );
-			$newAttribute->value = $this->expressionTag . '_ATTR_' . $this->expressionCount;
+			$newAttribute->value = "<?php echo \htmlspecialchars($attribute->value, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, 'UTF-8'); ?>";
 			$attributes[] = $newAttribute;
-
-			$this->expressions[ $this->expressionCount ] = "<?php echo \htmlspecialchars($attribute->value, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, 'UTF-8'); ?>";
-			$this->expressionCount++;
 		}
 
 		// Set new attributes after processing
@@ -459,16 +482,16 @@ class Compiler
 
 		if( $noEcho )
 		{
-			$this->expressions[ $this->expressionCount ] = "<?php { $raw; ?>";
+			$this->expressions[ $this->expressionCount ] = "$raw;";
 		}
 		else if( $noEscape )
 		{
-			$this->expressions[ $this->expressionCount ] = "<?php { echo $raw; ?>";
+			$this->expressions[ $this->expressionCount ] = "echo $raw;";
 		}
 		else
 		{
 			// todo: create our own safe function which will handle ints, and accept file/line context for exceptions
-			$this->expressions[ $this->expressionCount ] = "<?php { echo \htmlspecialchars($raw, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, 'UTF-8'); ?>";
+			$this->expressions[ $this->expressionCount ] = "echo \htmlspecialchars($raw, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, 'UTF-8');";
 		}
 
 		$this->expressionCount++;
