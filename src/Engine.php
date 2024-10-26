@@ -76,16 +76,8 @@ class Engine
 	 */
 	private function CompileFile( string $templateFilepath, string $parsedTemplateFilepath ) : void
 	{
-		// read the file
-		$code = \file_get_contents( $templateFilepath );
-
-		if( $code === false )
-		{
-			throw new \Exception( "Failed to read file \"{$templateFilepath}\"" );
-		}
-
 		$compiler = new Compiler();
-		$compiler->Parse( $code );
+		$compiler->ParseFile( $templateFilepath );
 		$parsedCode = $compiler->OutputCode();
 
 		// write compiled file

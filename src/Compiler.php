@@ -7,14 +7,8 @@ class Compiler
 {
 	private const LIBXML_OPTIONS =
 		\LIBXML_COMPACT | // Activate small nodes allocation optimization.
-		\LIBXML_HTML_NODEFDTD | // Prevent a default doctype being added when one is not found.
-		\LIBXML_HTML_NOIMPLIED | // Turn off the automatic adding of implied html/body... elements.
-		\LIBXML_NONET | // Disable network access when loading documents.
-		\LIBXML_NOXMLDECL | // Drop the XML declaration when saving a document.
-		\LIBXML_PARSEHUGE | // Relax any hardcoded limit from the parser.
 		\LIBXML_NOERROR | // Suppress error reports.
-		\LIBXML_NOBLANKS | // Remove blank nodes.
-		\LIBXML_PEDANTIC; // Enable pedantic error reporting.
+		\LIBXML_HTML_NOIMPLIED; // Turn off the automatic adding of implied html/body... elements.
 
 	private const ATTR_IF = 'v-if';
 	private const ATTR_ELSE = 'v-else';
@@ -22,12 +16,12 @@ class Compiler
 	private const ATTR_FOR = 'v-for';
 	private const ATTR_PRE = 'v-pre';
 
-	private \DOMDocument $DOM;
+	private \Dom\HTMLDocument $DOM;
 
 	/** @var array<int, string> */
 	private array $expressions = [];
 	private int $expressionCount = 0;
-	private string $expressionTag = 'PHPEXPRESSION';
+	private string $expressionTag = 'php-expression-';
 
 	public bool $Debug = false;
 
@@ -41,49 +35,38 @@ class Compiler
 		$this->expressions = [];
 		$this->expressionCount = 0;
 
+		$this->DOM = \Dom\HTMLDocument::createFromString( $Data, self::LIBXML_OPTIONS, 'UTF-8' );
+
+		$this->HandleNode( $this->DOM );
+	}
+
+	public function ParseFile( string $Filepath ) : void
+	{
+		$this->expressions = [];
+		$this->expressionCount = 0;
+
 		// @codeCoverageIgnoreStart
 		if( $this->Debug )
 		{
-			echo '===== [1]' . PHP_EOL . $Data . PHP_EOL;
+			echo '===== [1]' . PHP_EOL . $Filepath . PHP_EOL;
 		}
 		// @codeCoverageIgnoreEnd
 
-		$Data = '<?xml encoding="UTF-8">' . $Data;
-
-		$previousUseError = libxml_use_internal_errors( true );
+		//$previousUseError = libxml_use_internal_errors( true );
 
 		// TODO: Handle loadHTML warnings, e.g. when html is not fully valid
-		$this->DOM = new \DOMDocument( encoding: 'UTF-8' );
-		//$this->DOM->preserveWhiteSpace = false;
-		//$this->DOM->formatOutput = false;
+		$this->DOM = \Dom\HTMLDocument::createFromFile( $Filepath, self::LIBXML_OPTIONS, 'UTF-8' );
 
-		$loadResult = $this->DOM->loadHTML( $Data, self::LIBXML_OPTIONS );
-
+		/*
 		$errors = libxml_get_errors();
 		libxml_clear_errors();
 		libxml_use_internal_errors( $previousUseError );
-
-		if( $loadResult === false )
-		{
-			throw new \AssertionError( 'loadHTML call failed' ); // todo: better message
-		}
 
 		if( $this->Debug && !empty( $errors ) )
 		{
 			print_r( $errors );
 		}
-
-		// Remove the <?xml encoding="UTF-8">
-		foreach( $this->DOM->childNodes as $node )
-		{
-			if( $node instanceof \DOMProcessingInstruction )
-			{
-				$this->DOM->removeChild( $node );
-				break;
-			}
-		}
-
-		$this->DOM->encoding = 'UTF-8';
+		*/
 
 		// @codeCoverageIgnoreStart
 		if( $this->Debug )
@@ -147,25 +130,25 @@ class Compiler
 		return $code;
 	}
 
-	private function HandleNode( \DOMNode $parentNode ) : void
+	private function HandleNode( \Dom\Node $parentNode ) : void
 	{
 		// Use iterator_to_array to iterate over the current children state
 		// as the functions will modify the children
 		foreach( \iterator_to_array( $parentNode->childNodes ) as $node )
 		{
-			if( $node instanceof \DOMProcessingInstruction )
+			if( $node instanceof \Dom\ProcessingInstruction )
 			{
-				throw new SyntaxError( "DOMProcessingInstruction is not allowed", $node->getLineNo() );
+				throw new SyntaxError( "Processing instruction is not allowed", $node->getLineNo() );
 			}
 
 			// TODO: Handle DOMComment, it has no splitText
-			if( $node instanceof \DOMText )
+			if( $node instanceof \Dom\Text )
 			{
 				$this->HandleMustacheVariables( $node );
 				continue;
 			}
 
-			if( !( $node instanceof \DOMElement ) )
+			if( !( $node instanceof \Dom\HTMLElement ) )
 			{
 				continue;
 			}
@@ -196,33 +179,34 @@ class Compiler
 		}
 	}
 
-	private function HandleAttributes( \DOMElement $node ) : void
+	private function HandleAttributes( \Dom\HTMLElement $node ) : void
 	{
 		if( $node->parentNode === null || $node->attributes === null )
 		{
 			throw new \AssertionError( 'This should never happen.' );
 		}
 
-		/** @var \DOMAttr[] $attributes */
+		/** @var \Dom\Attr[] $attributes */
 		$attributes = [];
-		/** @var \DOMElement|null $newNode */
+		/** @var \Dom\HTMLElement|null $newNode */
 		$newNode = null;
 
-		$testPreviousSibling = function( string $name, \DOMElement $node, ?\DOMElement $newNode )
+		$testPreviousSibling = function( string $name, \Dom\HTMLElement $node, ?\Dom\HTMLElement $newNode )
 		{
 			if( $newNode !== null )
 			{
 				throw new SyntaxError( "Do not put $name on the same element that already has {$newNode->getAttribute( 'type' )}", $node->getLineNo() );
 			}
 
-			if( !( $node->previousSibling instanceof \DOMElement ) )
+			if( !( $node->previousSibling instanceof \Dom\HTMLElement ) )
 			{
 				throw new SyntaxError( 'Previous sibling must be a DOM element', $node->getLineNo() );
 			}
 
 			$previousExpressionType = null;
 
-			if( $node->previousSibling->tagName === $this->expressionTag )
+			// TODO: Silly uppercase
+			if( $node->previousSibling->tagName === \strtoupper( $this->expressionTag ) )
 			{
 				$previousExpressionType = $node->previousSibling->getAttribute( 'type' );
 			}
@@ -339,7 +323,7 @@ class Compiler
 			$this->expressionCount++;
 		}
 
-		/** @var \DOMAttr $attribute */
+		/** @var \Dom\Attr $attribute */
 		foreach( \iterator_to_array( $node->attributes ) as $attribute )
 		{
 			$node->removeAttributeNode( $attribute );
@@ -354,10 +338,9 @@ class Compiler
 
 			$this->ValidateExpression( "$attribute->value;", $node->getLineNo() );
 
-			$attributes[] = new \DOMAttr(
-				\substr( $attribute->name, 1 ),
-				$this->expressionTag . '_ATTR_' . $this->expressionCount
-			);
+			$newAttribute = $this->DOM->createAttribute( \substr( $attribute->name, 1 ) );
+			$newAttribute->value = $this->expressionTag . '_ATTR_' . $this->expressionCount;
+			$attributes[] = $newAttribute;
 
 			$this->expressions[ $this->expressionCount ] = "<?php echo \htmlspecialchars($attribute->value, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, 'UTF-8'); ?>";
 			$this->expressionCount++;
@@ -370,7 +353,7 @@ class Compiler
 		}
 	}
 
-	private function HandleMustacheVariables( \DOMText $node ) : void
+	private function HandleMustacheVariables( \Dom\Text $node ) : void
 	{
 		if( $node->parentNode === null )
 		{
@@ -445,7 +428,7 @@ class Compiler
 
 		if( $length > $end )
 		{
-			$remainder = new \DOMText( \substr( $node->data, $end ) );
+			$remainder = $this->DOM->createTextNode( \substr( $node->data, $end ) );
 			$node->parentNode->insertBefore( $remainder, $newNode->nextSibling );
 		}
 

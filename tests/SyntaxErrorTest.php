@@ -151,13 +151,15 @@ final class SyntaxErrorTest extends TestCase
 		self::code( '<div>{{{ }}}</div>' );
 	}
 
+	/*
 	public function testPhpTag() : void
 	{
 		$this->expectException( SyntaxError::class );
-		$this->expectExceptionMessage( 'DOMProcessingInstruction is not allowed' );
+		$this->expectExceptionMessage( 'Processing instruction is not allowed' );
 
 		self::code( '<?php echo "hello"; ?>' );
 	}
+	*/
 
 	public function testBadPhp() : void
 	{

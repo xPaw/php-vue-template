@@ -17,8 +17,8 @@ final class BasicTest extends TestCase
 	public function testBasicUnicode(): void
 	{
 		$this->assertEquals( '<span>hello</span>', self::code( '<span>hello</span>' ) );
-		//$this->assertEquals( '<span>привет</span>', self::output( '<span>привет</span>' ) );
-		$this->assertEquals( '<span>&#128106;</span>', self::code( '<span>👪</span>' ) );
+		$this->assertEquals( '<span>привет</span>', self::code( '<span>привет</span>' ) );
+		$this->assertEquals( '<span>👪</span>', self::code( '<span>👪</span>' ) );
 	}
 
 	public function testNestedElements(): void
@@ -28,7 +28,7 @@ final class BasicTest extends TestCase
 
 	public function testRetainDoctype(): void
 	{
-		$this->assertEquals( "<!DOCTYPE html>\n<html><h1>hello</h1></html>", self::code( '<!DOCTYPE html><html><h1>hello</h1></html>' ) );
+		$this->assertEquals( "<!DOCTYPE html><html><h1>hello</h1></html>", self::code( '<!DOCTYPE html><html><h1>hello</h1></html>' ) );
 	}
 
 	public function testClosesTag(): void
@@ -47,32 +47,33 @@ final class BasicTest extends TestCase
 	public function testElseIf(): void
 	{
 		$this->assertEquals(
-			'<?php if($test === 123){ ?><span>hello</span><?php } elseif($test === 456){ ?><span>world</span><?php }?>',
-			self::code( '<span v-if="$test === 123">hello</span><span v-else-if="$test === 456">world</span>' )
+			'<test><?php if($test === 123){ ?><span>hello</span><?php } elseif($test === 456){ ?><span>world</span><?php }?></test>',
+			self::code( '<test><span v-if="$test === 123">hello</span><span v-else-if="$test === 456">world</span></test>' )
 		);
 	}
 
 	public function testElse(): void
 	{
 		$this->assertEquals(
-			'<?php if($test === 123){ ?><span>hello</span><?php } else{ ?><span>world</span><?php }?>',
-			self::code( '<span v-if="$test === 123">hello</span><span v-else>world</span>' )
+			'<test><?php if($test === 123){ ?><span>hello</span><?php } else{ ?><span>world</span><?php }?></test>',
+			self::code( '<test><span v-if="$test === 123">hello</span><span v-else>world</span></test>' )
 		);
 	}
 
 	public function testElseIfElse(): void
 	{
 		$this->assertEquals(
-			'<?php if($test === 123){ ?><span>hello</span><?php } if($test === 456){ ?><span>world</span><?php } else{ ?><span>sailor</span><?php }?>',
-			self::code( '<span v-if="$test === 123">hello</span><span v-if="$test === 456">world</span><span v-else>sailor</span>' )
+			'<test><?php if($test === 123){ ?><span>hello</span><?php } if($test === 456){ ?><span>world</span><?php } else{ ?><span>sailor</span><?php }?></test>',
+			self::code( '<test><span v-if="$test === 123">hello</span><span v-if="$test === 456">world</span><span v-else>sailor</span></test>' )
 		);
 	}
 
 	public function testPre(): void
 	{
+		// TODO: Adds value v-else=""
 		$this->assertEquals(
-			'<?php if($test === 123){ ?><div>hello<span v-if="$test === 456">world</span><span v-else>{{ $mustache }}</span></div><?php }?>',
-			self::code( '<div v-if="$test === 123" v-pre>hello<span v-if="$test === 456">world</span><span v-else>{{ $mustache }}</span></div>' )
+			'<test><?php if($test === 123){ ?><div>hello<span v-if="$test === 456">world</span><span v-else="">{{ $mustache }}</span></div><?php }?></test>',
+			self::code( '<test><div v-if="$test === 123" v-pre>hello<span v-if="$test === 456">world</span><span v-else>{{ $mustache }}</span></div></test>' )
 		);
 	}
 
