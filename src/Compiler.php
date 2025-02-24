@@ -221,16 +221,16 @@ class Compiler
 				throw new SyntaxError( "Do not put $name on the same element that already has {$newNode->getAttribute( 'type' )}", $node->getLineNo() );
 			}
 
-			if( !( $node->previousSibling instanceof \Dom\HTMLElement ) )
+			if( !( $node->previousElementSibling instanceof \Dom\HTMLElement ) )
 			{
 				throw new SyntaxError( 'Previous sibling must be a DOM element', $node->getLineNo() );
 			}
 
 			$previousExpressionType = null;
 
-			if( $node->previousSibling->tagName === $this->expressionTag )
+			if( $node->previousElementSibling->tagName === $this->expressionTag )
 			{
-				$previousExpressionType = $node->previousSibling->getAttribute( 'type' );
+				$previousExpressionType = $node->previousElementSibling->getAttribute( 'type' );
 			}
 
 			if( $previousExpressionType !== self::ATTR_IF && $previousExpressionType !== self::ATTR_ELSE_IF )
