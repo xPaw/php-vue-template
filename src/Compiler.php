@@ -82,9 +82,7 @@ class Compiler
 	{
 		$this->InsertExpressions( $this->DOM );
 
-		// todo: this turns <div /> into <div></div>
 		$code = $this->DOM->saveHTML();
-		$code = \rtrim( $code, "\n" ); // todo: why is it outputting a new line?
 
 		// @codeCoverageIgnoreStart
 		if( $this->Debug )
