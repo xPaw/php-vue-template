@@ -56,4 +56,12 @@ final class MustacheTest extends TestCase
 			self::code( '<script type="text/javascript"><![CDATA[var t = {{ $type }};]]></script>' )
 		);
 	}
+
+	public function testRemovesAdjecentTags(): void
+	{
+		$this->assertEquals(
+			'<test><?php if($title){?><span></span><?php }echo \htmlspecialchars($title, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\');if($title){?><small>(<?php echo \htmlspecialchars($title, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\');?>)</small><?php }?></test>',
+			self::code( '<test><span v-if="$title"></span>{{ $title }}<small v-if="$title">({{ $title }})</small></test>' )
+		);
+	}
 }

@@ -81,6 +81,7 @@ class Compiler
 	public function OutputCode() : string
 	{
 		$this->InsertExpressions( $this->DOM );
+		$this->MergeAdjacentExpressions( $this->DOM );
 
 		$code = $this->DOM->saveHTML();
 
@@ -91,16 +92,6 @@ class Compiler
 		}
 		// @codeCoverageIgnoreEnd
 
-		//$code = str_replace( '</' . $this->expressionTag . '>', '<?php }? >', $code );
-		$code = str_replace( '?><?php ', '', $code );
-
-		// @codeCoverageIgnoreStart
-		if( $this->Debug )
-		{
-			echo '===== [4]' . PHP_EOL . $code . PHP_EOL;
-		}
-		// @codeCoverageIgnoreEnd
-
 		return $code;
 	}
 
@@ -108,12 +99,10 @@ class Compiler
 	{
 		foreach( $node->childNodes as $childNode )
 		{
-			if( !( $childNode instanceof \Dom\HTMLElement ) )
+			if( $childNode instanceof \Dom\HTMLElement )
 			{
-				continue;
+				$this->InsertExpressions( $childNode );
 			}
-
-			$this->InsertExpressions( $childNode );
 		}
 
 		if( $node instanceof \Dom\HTMLElement && $node->tagName === $this->expressionTag )
@@ -131,9 +120,29 @@ class Compiler
 				$newNodes[] = $childNode;
 			}
 
-			$newNodes[] = $this->DOM->createProcessingInstruction( 'php', $requiresClosingBracket ? '}?' : '?' );
+			if( $requiresClosingBracket )
+			{
+				$newNodes[] = $this->DOM->createProcessingInstruction( 'php', '}?' );
+			}
 
 			$node->replaceWith( ...$newNodes );
+		}
+	}
+
+	private function MergeAdjacentExpressions( \Dom\Node $node ) : void
+	{
+		foreach( $node->childNodes as $childNode )
+		{
+			$this->MergeAdjacentExpressions( $childNode );
+		}
+
+		if( $node instanceof \Dom\ProcessingInstruction && $node->target === 'php' )
+		{
+			while( $node->nextSibling instanceof \Dom\ProcessingInstruction && $node->nextSibling->target === 'php' )
+			{
+				$node->data = \rtrim( $node->data, '?' ) . \ltrim( $node->nextSibling->data, ' ' );
+				$node->nextSibling->remove();
+			}
 		}
 	}
 
@@ -439,7 +448,14 @@ class Compiler
 		}
 
 		// Truncate the beginning text until the mustache
-		$node->data = \substr( $node->data, 0, $start );
+		if( $start === 0 )
+		{
+			$node->remove();
+		}
+		else
+		{
+			$node->data = \substr( $node->data, 0, $start );
+		}
 
 		$modifier = $mustache[ 2 ];
 		$noEcho = false;
