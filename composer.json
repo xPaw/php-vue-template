@@ -22,12 +22,12 @@
         }
     ],
 	"require": {
-		"php": ">=8.1",
+		"php": ">=8.4",
 		"ext-dom": "*",
 		"ext-libxml" : "*"
 	},
     "require-dev": {
-        "phpstan/phpstan": "^1.5",
-        "phpunit/phpunit": "^11.4"
+        "phpstan/phpstan": "^2.1",
+        "phpunit/phpunit": "^12.0"
     }
 }

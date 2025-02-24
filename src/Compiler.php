@@ -84,12 +84,6 @@ class Compiler
 
 		// todo: this turns <div /> into <div></div>
 		$code = $this->DOM->saveHTML();
-
-		if( $code === false )
-		{
-			throw new \AssertionError( 'saveHTML call failed' ); // todo: better message
-		}
-
 		$code = \rtrim( $code, "\n" ); // todo: why is it outputting a new line?
 
 		// @codeCoverageIgnoreStart
@@ -98,11 +92,6 @@ class Compiler
 			echo '===== [3]' . PHP_EOL . $code . PHP_EOL;
 		}
 		// @codeCoverageIgnoreEnd
-
-		if( $code === null )
-		{
-			throw new \AssertionError( 'preg_replace_callback call failed' ); // todo: better message
-		}
 
 		//$code = str_replace( '</' . $this->expressionTag . '>', '<?php }? >', $code );
 		$code = str_replace( '?><?php ', '', $code );
@@ -138,16 +127,23 @@ class Compiler
 					$expression = '{' . $expression;
 				}
 
+				$parentNode = $node->parentNode;
+
+				if( $parentNode === null )
+				{
+					throw new \AssertionError( 'Parent node is null.' );
+				}
+
 				$instruction = $this->DOM->createProcessingInstruction( 'php', $expression );
-				$node->parentNode->insertBefore( $instruction, $node );
+				$parentNode->insertBefore( $instruction, $node );
 
 				foreach( $node->childNodes as $childNode )
 				{
-					$node->parentNode->insertBefore( $childNode, $node );
+					$parentNode->insertBefore( $childNode, $node );
 				}
 
 				$instruction = $this->DOM->createProcessingInstruction( 'php', '}?' );
-				$node->parentNode->insertBefore( $instruction, $node );
+				$parentNode->insertBefore( $instruction, $node );
 
 				$node->remove();
 			}
@@ -179,7 +175,7 @@ class Compiler
 				continue;
 			}
 
-			if( $node->attributes === null || $node->attributes->length === 0 )
+			if( $node->attributes->length === 0 )
 			{
 				$this->HandleNode( $node );
 				continue;
@@ -188,9 +184,10 @@ class Compiler
 			$this->HandleAttributes( $node );
 
 			// Skip compilation for this element and all its children.
-			if( $node->hasAttribute( self::ATTR_PRE ) )
+			$attribute = $node->getAttributeNode( self::ATTR_PRE );
+
+			if( $attribute !== null )
 			{
-				$attribute = $node->getAttributeNode( self::ATTR_PRE );
 				$node->removeAttributeNode( $attribute );
 
 				if( !empty( $attribute->value ) )
@@ -207,7 +204,7 @@ class Compiler
 
 	private function HandleAttributes( \Dom\HTMLElement $node ) : void
 	{
-		if( $node->parentNode === null || $node->attributes === null )
+		if( $node->parentNode === null )
 		{
 			throw new \AssertionError( 'This should never happen.' );
 		}
@@ -243,9 +240,9 @@ class Compiler
 		};
 
 		// Conditionally render an element based on the truthy-ness of the expression value.
-		if( $node->hasAttribute( self::ATTR_IF ) )
+		$attribute = $node->getAttributeNode( self::ATTR_IF );
+		if( $attribute !== null )
 		{
-			$attribute = $node->getAttributeNode( self::ATTR_IF );
 			$node->removeAttributeNode( $attribute );
 
 			if( empty( $attribute->value ) )
@@ -255,6 +252,7 @@ class Compiler
 
 			$this->ValidateExpression( "if($attribute->value);", $node->getLineNo() );
 
+			/** @var \Dom\HTMLElement */
 			$newNode = $this->DOM->createElement( $this->expressionTag );
 			$newNode->setAttribute( 'c', (string)$this->expressionCount );
 			$newNode->setAttribute( 'type', $attribute->name );
@@ -267,9 +265,9 @@ class Compiler
 
 		// Denote the "else if block" for v-if. Can be chained.
 		// Restriction: previous sibling element must have v-if or v-else-if.
-		if( $node->hasAttribute( self::ATTR_ELSE_IF ) )
+		$attribute = $node->getAttributeNode( self::ATTR_ELSE_IF );
+		if( $attribute !== null )
 		{
-			$attribute = $node->getAttributeNode( self::ATTR_ELSE_IF );
 			$node->removeAttributeNode( $attribute );
 
 			if( empty( $attribute->value ) )
@@ -281,6 +279,7 @@ class Compiler
 
 			$this->ValidateExpression( "if($attribute->value);", $node->getLineNo() );
 
+			/** @var \Dom\HTMLElement */
 			$newNode = $this->DOM->createElement( $this->expressionTag );
 			$newNode->setAttribute( 'c', (string)$this->expressionCount );
 			$newNode->setAttribute( 'type', $attribute->name );
@@ -293,9 +292,9 @@ class Compiler
 
 		// Denote the "else block" for v-if or a v-if / v-else-if chain.
 		// Restriction: previous sibling element must have v-if or v-else-if.
-		if( $node->hasAttribute( self::ATTR_ELSE ) )
+		$attribute = $node->getAttributeNode( self::ATTR_ELSE );
+		if( $attribute !== null )
 		{
-			$attribute = $node->getAttributeNode( self::ATTR_ELSE );
 			$node->removeAttributeNode( $attribute );
 
 			if( !empty( $attribute->value ) )
@@ -316,9 +315,9 @@ class Compiler
 		}
 
 		// Render the element multiple times based on the source data.
-		if( $node->hasAttribute( self::ATTR_FOR ) )
+		$attribute = $node->getAttributeNode( self::ATTR_FOR );
+		if( $attribute !== null )
 		{
-			$attribute = $node->getAttributeNode( self::ATTR_FOR );
 			$node->removeAttributeNode( $attribute );
 
 			if( empty( $attribute->value ) )
