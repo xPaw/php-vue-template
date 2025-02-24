@@ -157,7 +157,7 @@ class Compiler
 				throw new SyntaxError( "Processing instruction is not allowed", $node->getLineNo() );
 			}
 
-			// TODO: Handle DOMComment, it has no splitText
+			// TODO: Handle DOM\Comment, it's harder to do because it will split into separate <!-- --> tags, which would break conditional comments
 			if( $node instanceof \Dom\Text )
 			{
 				$this->HandleMustacheVariables( $node );
