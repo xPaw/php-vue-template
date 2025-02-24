@@ -88,7 +88,7 @@ final class BasicTest extends TestCase
 	public function testIfFor(): void
 	{
 		$this->assertEquals(
-			'<test><?php if($test === 123){foreach($array as $key => $value){?><span>hello</span><?php } }?></test>',
+			'<test><?php if($test === 123){foreach($array as $key => $value){?><span>hello</span><?php }}?></test>',
 			self::code( '<test><span v-if="$test === 123" v-for="$array as $key => $value">hello</span></test>' )
 		);
 	}

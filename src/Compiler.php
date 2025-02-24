@@ -106,49 +106,40 @@ class Compiler
 		return $code;
 	}
 
-	private function InsertExpressions( \Dom\Node $parentNode ) : void
+	private function InsertExpressions( \Dom\Node $node ) : void
 	{
-		// Use iterator_to_array to iterate over the current children state
-		// as the functions will modify the children
-		foreach( \iterator_to_array( $parentNode->childNodes ) as $node )
+		foreach( $node->childNodes as $childNode )
 		{
-			if( !( $node instanceof \Dom\HTMLElement ) )
+			if( !( $childNode instanceof \Dom\HTMLElement ) )
 			{
 				continue;
 			}
 
-			if( $node->tagName === $this->expressionTag )
+			$this->InsertExpressions( $childNode );
+		}
+
+		if( $node instanceof \Dom\HTMLElement && $node->tagName === $this->expressionTag )
+		{
+			$expressionId = $node->getAttribute( 'c' );
+			$expression = $this->expressions[ $expressionId ] . '?';
+
+			if( !\str_starts_with( $expression, 'if' ) && !\str_starts_with( $expression, 'else' ) && !\str_starts_with( $expression, 'foreach' ) )
 			{
-				$expressionId = $node->getAttribute( 'c' );
-				$expression = $this->expressions[ $expressionId ] . '?';
-
-				if( !\str_starts_with( $expression, 'if' ) && !\str_starts_with( $expression, 'else' ) && !\str_starts_with( $expression, 'foreach' ) )
-				{
-					$expression = '{' . $expression;
-				}
-
-				$parentNode = $node->parentNode;
-
-				if( $parentNode === null )
-				{
-					throw new \AssertionError( 'Parent node is null.' );
-				}
-
-				$instruction = $this->DOM->createProcessingInstruction( 'php', $expression );
-				$parentNode->insertBefore( $instruction, $node );
-
-				foreach( $node->childNodes as $childNode )
-				{
-					$parentNode->insertBefore( $childNode, $node );
-				}
-
-				$instruction = $this->DOM->createProcessingInstruction( 'php', '}?' );
-				$parentNode->insertBefore( $instruction, $node );
-
-				$node->remove();
+				$expression = '{' . $expression;
 			}
 
-			$this->InsertExpressions( $node );
+			/** @var \Dom\Node[] */
+			$newNodes = [];
+			$newNodes[] = $this->DOM->createProcessingInstruction( 'php', $expression );
+
+			foreach( $node->childNodes as $childNode )
+			{
+				$newNodes[] = $childNode;
+			}
+
+			$newNodes[] = $this->DOM->createProcessingInstruction( 'php', '}?' );
+
+			$node->replaceWith( ...$newNodes );
 		}
 	}
 
