@@ -122,11 +122,7 @@ class Compiler
 		{
 			$expressionId = $node->getAttribute( 'c' );
 			$expression = $this->expressions[ $expressionId ] . '?';
-
-			if( !\str_starts_with( $expression, 'if' ) && !\str_starts_with( $expression, 'else' ) && !\str_starts_with( $expression, 'foreach' ) )
-			{
-				$expression = '{' . $expression;
-			}
+			$requiresClosingBracket = \str_ends_with( $expression, '{?' );
 
 			/** @var \Dom\Node[] */
 			$newNodes = [];
@@ -137,7 +133,7 @@ class Compiler
 				$newNodes[] = $childNode;
 			}
 
-			$newNodes[] = $this->DOM->createProcessingInstruction( 'php', '}?' );
+			$newNodes[] = $this->DOM->createProcessingInstruction( 'php', $requiresClosingBracket ? '}?' : '?' );
 
 			$node->replaceWith( ...$newNodes );
 		}
