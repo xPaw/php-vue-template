@@ -28,16 +28,18 @@ foreach( new DirectoryIterator( __DIR__ . '/tests/' ) as $file )
 		$word = str_replace( [
 			'"',
 			'\\',
+			"\n",
 		], [
 			'\x34',
 			'\x92',
+			'',
 		], $word );
 
 		$words[] = '"' . $word . '"';
 	}
 }
 
-file_put_contents( 'dictionary.txt', implode( "\n", $words ) );
+file_put_contents( 'php-fuzzer-dictionary.txt', implode( "\n", $words ) );
 
 $parser = new Compiler();
 $fuzzer->setTarget( function( string $input ) use( $parser )
@@ -46,4 +48,4 @@ $fuzzer->setTarget( function( string $input ) use( $parser )
 	$parser->OutputCode();
 } );
 $fuzzer->setMaxLen( 256 );
-$fuzzer->addDictionary( 'dictionary.txt' );
+$fuzzer->addDictionary( 'php-fuzzer-dictionary.txt' );
