@@ -39,8 +39,8 @@ final class BasicTest extends TestCase
 	public function testIf(): void
 	{
 		$this->assertEquals(
-			'<?php if($test === 123){?><span>hello</span><?php }?>',
-			self::code( '<span v-if="$test === 123">hello</span>' )
+			'<test><?php if($test === 123){?><span>hello</span><?php }?></test>',
+			self::code( '<test><span v-if="$test === 123">hello</span></test>' )
 		);
 	}
 
@@ -80,16 +80,16 @@ final class BasicTest extends TestCase
 	public function testFor(): void
 	{
 		$this->assertEquals(
-			'<?php foreach($array as $value){?><li>text</li><?php }?>',
-			self::code( '<li v-for="$array as $value">text</li>' )
+			'<test><?php foreach($array as $value){?><li>text</li><?php }?></test>',
+			self::code( '<test><li v-for="$array as $value">text</li></test>' )
 		);
 	}
 
 	public function testIfFor(): void
 	{
 		$this->assertEquals(
-			'<?php if($test === 123){foreach($array as $key => $value){?><span>hello</span><?php } }?>',
-			self::code( '<span v-if="$test === 123" v-for="$array as $key => $value">hello</span>' )
+			'<test><?php if($test === 123){foreach($array as $key => $value){?><span>hello</span><?php } }?></test>',
+			self::code( '<test><span v-if="$test === 123" v-for="$array as $key => $value">hello</span></test>' )
 		);
 	}
 
