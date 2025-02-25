@@ -67,19 +67,19 @@ final class GeneratedExceptionTest extends TestCase
 		return [
 			'invalid class binding' => [
 				'<div :class="class Test"></div>',
-				'Expression "class Test;" failed to parse: syntax error, unexpected token ";", expecting "{"'
+				'Expression "echo class Test;" failed to parse: syntax error, unexpected token "class'
 			],
 			'invalid use of declare' => [
 				'<div :data="declare(strict_types=1)"></div>',
-				'Token T_DECLARE is disallowed in expression "declare(strict_types=1);"'
+				'Expression "echo declare(strict_types=1);" failed to parse: syntax error, unexpected token "declare"'
 			],
 			'invalid attribute syntax' => [
 				'<div :data="#[Attr]"></div>',
-				'Expression "#[Attr];" failed to parse: syntax error, unexpected token ";"'
+				'Expression "echo #[Attr];" failed to parse: syntax error, unexpected token ";", expecting "function" or "fn" or "static" or "#["'
 			],
 			'invalid heredoc syntax' => [
 				'<div :content="<<<EOD\ntest\nEOD"></div>',
-				'Expression "<<<EOD\ntest\nEOD;" failed to parse: syntax error, unexpected token "<<", expecting end of file'
+				'Expression "echo <<<EOD\ntest\nEOD;" failed to parse: syntax error, unexpected token "<<"'
 			]
 		];
 	}
@@ -271,11 +271,11 @@ final class GeneratedExceptionTest extends TestCase
 			],
 			'binding with T_ATTRIBUTE' => [
 				'<div :attr="#[Test]"></div>',
-				'Expression "#[Test];" failed to parse: syntax error, unexpected token ";"'
+				'Expression "echo #[Test];" failed to parse: syntax error, unexpected token ";", expecting "function" or "fn" or "static" or "#["'
 			],
 			'binding with T_CLASS' => [
 				'<div :attr="class Test {}"></div>',
-				'Token T_CLASS is disallowed in expression "class Test {};"'
+				'Expression "echo class Test {};" failed to parse: syntax error, unexpected token "class"'
 			],
 			'v-if with T_CLASS' => [
 				'<div v-if="class Test {}"></div>',
@@ -291,7 +291,7 @@ final class GeneratedExceptionTest extends TestCase
 			],
 			'binding with declare' => [
 				'<div :attr="declare(strict_types=1)"></div>',
-				'Token T_DECLARE is disallowed in expression "declare(strict_types=1);"'
+				'Expression "echo declare(strict_types=1);" failed to parse: syntax error, unexpected token "declare"'
 			],
 			'mustache with php close tag' => [
 				'<div>{{ $test;?> }}</div>',
@@ -299,7 +299,7 @@ final class GeneratedExceptionTest extends TestCase
 			],
 			'binding with php close tag' => [
 				'<div :attr="$test;?>"></div>',
-				'Token T_CLOSE_TAG is disallowed in expression "$test;?>;"'
+				'Token T_CLOSE_TAG is disallowed in expression "echo $test;?>;"'
 			]
 		];
 	}

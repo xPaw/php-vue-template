@@ -175,8 +175,6 @@ class Compiler
 				continue;
 			}
 
-			$this->HandleAttributes( $node );
-
 			// Skip compilation for this element and all its children.
 			$attribute = $node->getAttributeNode( self::ATTR_PRE );
 
@@ -192,6 +190,7 @@ class Compiler
 				continue;
 			}
 
+			$this->HandleAttributes( $node );
 			$this->HandleNode( $node );
 		}
 	}
@@ -356,7 +355,7 @@ class Compiler
 				continue;
 			}
 
-			$this->ValidateExpression( "$attribute->value;", $node->getLineNo() );
+			$this->ValidateExpression( "echo $attribute->value;", $node->getLineNo() );
 
 			$newAttribute = $this->DOM->createAttribute( \substr( $attribute->name, 1 ) );
 			$newAttribute->value = "<?php echo \htmlspecialchars($attribute->value, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, 'UTF-8'); ?>";

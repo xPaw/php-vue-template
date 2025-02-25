@@ -71,7 +71,7 @@ final class BasicTest extends TestCase
 	public function testPre(): void
 	{
 		static::assertEquals(
-			'<test><?php if($test === 123){?><div>hello<span v-if="$test === 456">world</span><span v-else="">{{ $mustache }}</span></div><?php }?></test>',
+			'<test><div v-if="$test === 123">hello<span v-if="$test === 456">world</span><span v-else="">{{ $mustache }}</span></div></test>',
 			self::code( '<test><div v-if="$test === 123" v-pre>hello<span v-if="$test === 456">world</span><span v-else>{{ $mustache }}</span></div></test>' )
 		);
 	}

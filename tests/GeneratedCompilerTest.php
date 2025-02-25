@@ -310,36 +310,6 @@ final class GeneratedCompilerTest extends TestCase
 		];
 	}
 
-	/*
-	#[DataProvider('provideEmptyElements')]
-	public function testEmptyElements(string $input, string $expected): void
-	{
-		static::assertEquals($expected, self::code($input));
-	}
-
-	public static function provideEmptyElements(): array
-	{
-		return [
-			'empty with mustache' => [
-				'<div>{{ }}</div>',
-				'Expression "echo ;" failed to parse: syntax error, unexpected token ";"'
-			],
-			'empty v-if' => [
-				'<div v-if=""></div>',
-				'Attribute v-if must not be empty'
-			],
-			'empty self-closing' => [
-				'<img v-if="$show" src="test.jpg" />',
-				'<?php if($show){?><img src="test.jpg"/><?php }?>'
-			],
-			'multiple empty attributes' => [
-				'<div class="" id="" :data-test="$value"></div>',
-				'<div class="" id="" data-test="<?php echo \htmlspecialchars($value, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\'); ?>"></div>'
-			]
-		];
-	}
-	*/
-
 	#[DataProvider('provideMalformedInput')]
 	public function testMalformedInput(string $input, string $expected): void
 	{
@@ -475,5 +445,211 @@ final class GeneratedCompilerTest extends TestCase
 				'<!-- {{ $value }} -->'
 			]
 		];
+	}
+
+		/**
+	 * Tests empty elements that should throw exceptions
+	 */
+	#[DataProvider('provideEmptyElementsWithExceptions')]
+	public function testEmptyElementsWithExceptions(string $input, string $expectedMessage): void
+	{
+		$this->expectException(SyntaxError::class);
+		$this->expectExceptionMessage($expectedMessage);
+
+		self::code($input);
+	}
+
+	/**
+	 * Tests empty elements that should be properly rendered
+	 */
+	#[DataProvider('provideEmptyElementsRendering')]
+	public function testEmptyElementsRendering(string $input, string $expected): void
+	{
+		$this->assertEquals($expected, self::code($input));
+	}
+
+	/**
+	 * @return array<string, array{string, string}>
+	 */
+	public static function provideEmptyElementsWithExceptions(): array
+	{
+		return [
+			'empty mustache' => [
+				'<div>{{ }}</div>',
+				'Expression "echo ;" failed to parse: syntax error, unexpected token ";"'
+			],
+			'empty v-if' => [
+				'<div v-if=""></div>',
+				'Attribute v-if must not be empty'
+			],
+			'empty v-else-if' => [
+				'<test><div v-if="$condition"></div><div v-else-if=""></div></test>',
+				'Attribute v-else-if must not be empty'
+			],
+			'empty v-for' => [
+				'<div v-for=""></div>',
+				'Attribute v-for must not be empty'
+			],
+			'empty dynamic attribute' => [
+				'<div :attr=""></div>',
+				'Expression "echo ;" failed to parse: syntax error, unexpected token ";"'
+			],
+			'whitespace-only mustache' => [
+				'<div>{{
+
+				}}</div>',
+				'Expression "echo ;" failed to parse: syntax error, unexpected token ";"'
+			],
+			'whitespace-only dynamic attr' => [
+				'<div :attr="  "></div>',
+				'Expression "echo   ;" failed to parse: syntax error, unexpected token ";"'
+			]
+		];
+	}
+
+	/**
+	 * @return array<string, array{string, string}>
+	 */
+	public static function provideEmptyElementsRendering(): array
+	{
+		return [
+			'void element with directives' => [
+				'<test><img v-if="$show" src="test.jpg" /></test>',
+				'<test><?php if($show){?><img src="test.jpg"><?php }?></test>'
+			],
+			'empty div' => [
+				'<div></div>',
+				'<div></div>'
+			],
+			'multiple empty static attributes' => [
+				'<div class="" id="" role=""></div>',
+				'<div class="" id="" role=""></div>'
+			],
+			'mixed empty and dynamic attributes' => [
+				'<div class="" id="" :data-test="$value"></div>',
+				'<div class="" id="" data-test="<?php echo \htmlspecialchars($value, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\'); ?>"></div>'
+			],
+			'element with only whitespace' => [
+				'<div>    </div>',
+				'<div>    </div>'
+			],
+			'element with newlines only' => [
+				"<div>\n\n</div>",
+				"<div>\n\n</div>"
+			],
+			'nested empty elements' => [
+				'<div><span></span><p></p></div>',
+				'<div><span></span><p></p></div>'
+			],
+			'all self-closing void elements' => [
+				'<div><img src="test.jpg"/><br/><hr/><input type="text"/><meta/></div>',
+				'<div><img src="test.jpg"><br><hr><input type="text"><meta></div>'
+			],
+			'self-closing with dynamic attributes' => [
+				'<test><input v-if="$show" :type="$inputType" :value="$value" /></test>',
+				'<test><?php if($show){?><input type="<?php echo \htmlspecialchars($inputType, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\'); ?>" value="<?php echo \htmlspecialchars($value, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\'); ?>"><?php }?></test>'
+			],
+			'void element with dynamic binding and condition' => [
+				'<test><hr v-if="$showLine" :class="$lineClass" /></test>',
+				'<test><?php if($showLine){?><hr class="<?php echo \htmlspecialchars($lineClass, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\'); ?>"><?php }?></test>'
+			],
+			'void element with condition and loop' => [
+				'<test><input v-for="$inputs as $input" :type="$input->type" /></test>',
+				'<test><?php foreach($inputs as $input){?><input type="<?php echo \htmlspecialchars($input->type, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\'); ?>"><?php }?></test>'
+			],
+			'empty element with pre directive' => [
+				'<div v-pre></div>',
+				'<div></div>'
+			],
+			'element with conditional empty child' => [
+				'<div><span v-if="$show"></span></div>',
+				'<div><?php if($show){?><span></span><?php }?></div>'
+			],
+			'element with v-pre and dynamic attributes' => [
+				'<div v-pre :class="$cls" :data-value="$val"></div>',
+				'<div :class="$cls" :data-value="$val"></div>'
+			]
+		];
+	}
+
+	/**
+	 * Test specifically for HTML5 void elements which are self-closing
+	 */
+	#[DataProvider('provideHtml5VoidElements')]
+	public function testHtml5VoidElements(string $element): void
+	{
+		$input = "<$element/>";
+		$expected = "<$element>";
+		$this->assertEquals($expected, self::code($input));
+
+		// With attributes
+		$input = "<$element class=\"test\" id=\"test-id\"/>";
+		$expected = "<$element class=\"test\" id=\"test-id\">";
+		$this->assertEquals($expected, self::code($input));
+
+		// With dynamic attributes
+		$input = "<$element :class=\"\$dynamicClass\" :id=\"\$dynamicId\"/>";
+		$expected = "<$element class=\"<?php echo \htmlspecialchars(\$dynamicClass, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, 'UTF-8'); ?>\" id=\"<?php echo \htmlspecialchars(\$dynamicId, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, 'UTF-8'); ?>\">";
+		$this->assertEquals($expected, self::code($input));
+	}
+
+	/**
+	 * @return array<string, array{string}>
+	 */
+	public static function provideHtml5VoidElements(): array
+	{
+		return [
+			'area' => ['area'],
+			'base' => ['base'],
+			'br' => ['br'],
+			//'col' => ['col'],
+			'embed' => ['embed'],
+			'hr' => ['hr'],
+			'img' => ['img'],
+			'input' => ['input'],
+			'link' => ['link'],
+			'meta' => ['meta'],
+			'source' => ['source'],
+			'track' => ['track'],
+			'wbr' => ['wbr']
+		];
+	}
+
+	/**
+	 * Test for non-void elements incorrectly self-closed
+	 */
+	public function testNonVoidSelfClosedElements(): void
+	{
+		// Non-void elements should be corrected if self-closed
+		$input = '<div/>';
+		$expected = '<div></div>';
+		$this->assertEquals($expected, self::code($input));
+
+		// This should work with attributes too
+		$input = '<span class="test" id="id"/>';
+		$expected = '<span class="test" id="id"></span>';
+		$this->assertEquals($expected, self::code($input));
+
+		// And with dynamic attributes
+		$input = '<p :class="$cls"/>';
+		$expected = '<p class="<?php echo \htmlspecialchars($cls, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\'); ?>"></p>';
+		$this->assertEquals($expected, self::code($input));
+	}
+
+	/**
+	 * Test nested conditions and loops with empty elements
+	 */
+	public function testNestedConditionsWithEmptyElements(): void
+	{
+		// Testing correct order of nested v-if and v-for
+		// v-if has higher precedence than v-for according to the compiler
+		$input = '<test><div v-if="$outer"><span v-if="$inner"></span></div></test>';
+		$expected = '<test><?php if($outer){?><div><?php if($inner){?><span></span><?php }?></div><?php }?></test>';
+		$this->assertEquals($expected, self::code($input));
+
+		// Test a more complex scenario with nested conditions and loops
+		$input = '<test><ul v-if="$hasItems"><li v-for="$items as $item" v-if="$item->show"></li><li v-else>Empty</li></ul><div v-else></div></test>';
+		$expected = '<test><?php if($hasItems){?><ul><?php if($item->show){foreach($items as $item){?><li></li><?php }}else{?><li>Empty</li><?php }?></ul><?php }else{?><div></div><?php }?></test>';
+		$this->assertEquals($expected, self::code($input));
 	}
 }
