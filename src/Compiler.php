@@ -71,7 +71,7 @@ class Compiler
 		// @codeCoverageIgnoreStart
 		if( $this->Debug )
 		{
-			echo '===== [2]' . PHP_EOL . $this->DOM->saveHTML() . PHP_EOL;
+			echo '===== [2]' . PHP_EOL . $this->DOM->saveHtml() . PHP_EOL;
 		}
 		// @codeCoverageIgnoreEnd
 
