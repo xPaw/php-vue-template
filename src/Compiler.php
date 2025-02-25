@@ -17,6 +17,7 @@ class Compiler
 	private const ATTR_PRE = 'v-pre';
 
 	// https://www.php.net/manual/en/tokens.php
+	/** @var \PhpToken[] */
 	private const array ASSIGNMENT_OPERATORS =
 	[
 		'=',              // =
@@ -35,6 +36,7 @@ class Compiler
 		T_XOR_EQUAL,      // ^=
 	];
 
+	/** @var \PhpToken[] */
 	private const array ALLOWED_TOKENS =
 	[
 		'-',
@@ -73,11 +75,8 @@ class Compiler
 		T_DOUBLE_ARROW,               // =>
 		T_DOUBLE_CAST,                // (real), (double) or (float)
 		T_DOUBLE_COLON,               // ::
-		T_ELSE,                       // else
-		T_ELSEIF,                     // elseif
 		T_EMPTY,                      // empty
 		T_FN,                         // fn (arrow functions)
-		T_IF,                         // if
 		T_INC,                        // ++
 		T_INT_CAST,                   // (int) or (integer)
 		T_IS_EQUAL,                   // ==
@@ -338,7 +337,7 @@ class Compiler
 				throw new SyntaxError( "Attribute $attribute->name must not be empty", $node->getLineNo() );
 			}
 
-			$tokens = $this->ValidateExpression( "if($raw)", $node->getLineNo() );
+			$tokens = $this->ValidateExpression( "if($raw)", self::ATTR_IF, $node->getLineNo() );
 
 			if( empty( $tokens ) )
 			{
@@ -370,7 +369,7 @@ class Compiler
 				throw new SyntaxError( "Attribute $attribute->name must not be empty", $node->getLineNo() );
 			}
 
-			$tokens = $this->ValidateExpression( "if($raw)", $node->getLineNo() );
+			$tokens = $this->ValidateExpression( "if($raw)", self::ATTR_ELSE_IF, $node->getLineNo() );
 
 			if( empty( $tokens ) )
 			{
@@ -425,7 +424,7 @@ class Compiler
 				throw new SyntaxError( "Attribute $attribute->name must not be empty", $node->getLineNo() );
 			}
 
-			$this->ValidateExpression( "foreach($attribute->value)", $node->getLineNo(), isForeach: true );
+			$this->ValidateExpression( "foreach($attribute->value)", self::ATTR_FOR, $node->getLineNo() );
 
 			$newNodeFor = $this->DOM->createElement( $this->expressionTag );
 			$newNodeFor->setAttribute( 'c', (string)$this->expressionCount );
@@ -463,7 +462,7 @@ class Compiler
 			}
 
 			$raw = \trim( $attribute->value );
-			$tokens = $this->ValidateExpression( $raw, $node->getLineNo() );
+			$tokens = $this->ValidateExpression( $raw, null, $node->getLineNo() );
 
 			if( empty( $tokens ) )
 			{
@@ -594,7 +593,7 @@ class Compiler
 
 		$raw = \trim( $raw );
 
-		$tokens = $this->ValidateExpression( $raw, $node->getLineNo() );
+		$tokens = $this->ValidateExpression( $raw, null, $node->getLineNo() );
 
 		if( empty( $tokens ) )
 		{
@@ -623,8 +622,10 @@ class Compiler
 		}
 	}
 
-	/** @return \PhpToken[] */
-	private function ValidateExpression( string $expression, int $line, bool $isForeach = false ) : array
+	/**
+	 * @return \PhpToken[]
+	 */
+	private function ValidateExpression( string $expression, ?string $tokenType, int $line ) : array
 	{
 		try
 		{
@@ -645,6 +646,22 @@ class Compiler
 			throw new SyntaxError( "Expression \"$expression\" was misparsed", $line );
 		}
 
+		if( $tokenType === self::ATTR_IF || $tokenType === self::ATTR_ELSE_IF )
+		{
+			if( !\array_shift( $tokens )->is( T_IF ) )
+			{
+				throw new SyntaxError( "Expression \"$expression\" was misparsed", $line );
+			}
+		}
+
+		if( $tokenType === self::ATTR_FOR )
+		{
+			if( !\array_shift( $tokens )->is( T_FOREACH ) )
+			{
+				throw new SyntaxError( "Expression \"$expression\" was misparsed", $line );
+			}
+		}
+
 		foreach( $tokens as $i => $token )
 		{
 			// @codeCoverageIgnoreStart
@@ -655,13 +672,13 @@ class Compiler
 			}
 			// @codeCoverageIgnoreEnd
 
+			if( $tokenType === self::ATTR_FOR && $token->is( T_AS ) )
+			{
+				continue;
+			}
+
 			if( !$token->is( self::ALLOWED_TOKENS ) )
 			{
-				if( $isForeach && $token->is( [ T_FOREACH, T_AS ] ) )
-				{
-					continue;
-				}
-
 				throw new SyntaxError( "Token {$token->getTokenName()} is disallowed in expression \"{$expression}\"", $line );
 			}
 		}
