@@ -31,23 +31,23 @@ final class GeneratedExceptionTest extends TestCase
 		return [
 			'unclosed function call' => [
 				'<div>{{ array_map( }}</div>',
-				'Expression "echo array_map(;" failed to parse: syntax error, unexpected token ";"'
+				'Expression "array_map(" failed to parse: syntax error, unexpected token ";"'
 			],
 			'invalid property access' => [
 				'<div>{{ $object-> }}</div>',
-				'Expression "echo $object->;" failed to parse: syntax error, unexpected token ";"'
+				'Expression "$object->" failed to parse: syntax error, unexpected token ";"'
 			],
 			'nested invalid expressions' => [
 				'<div>{{ fn($x) => }}</div>',
-				'Expression "echo fn($x) =>;" failed to parse: syntax error, unexpected token ";"'
+				'Expression "fn($x) =>" failed to parse: syntax error, unexpected token ";"'
 			],
 			'invalid array syntax' => [
 				'<div>{{ $array[=> }}</div>',
-				'Expression "echo $array[=>;" failed to parse: syntax error, unexpected token "=>"'
+				'Expression "$array[=>" failed to parse: syntax error, unexpected token "=>", expecting "]"'
 			],
 			'broken ternary' => [
 				'<div>{{ $condition ? : }}</div>',
-				'Expression "echo $condition ? :;" failed to parse: syntax error, unexpected token ";"'
+				'Expression "$condition ? :" failed to parse: syntax error, unexpected token ";"'
 			]
 		];
 	}
@@ -67,19 +67,19 @@ final class GeneratedExceptionTest extends TestCase
 		return [
 			'invalid class binding' => [
 				'<div :class="class Test"></div>',
-				'Expression "echo class Test;" failed to parse: syntax error, unexpected token "class'
+				'Expression "class Test" failed to parse: syntax error, unexpected token ";", expecting "{"'
 			],
 			'invalid use of declare' => [
 				'<div :data="declare(strict_types=1)"></div>',
-				'Expression "echo declare(strict_types=1);" failed to parse: syntax error, unexpected token "declare"'
+				'Token T_DECLARE is disallowed in expression "declare(strict_types=1)"'
 			],
 			'invalid attribute syntax' => [
 				'<div :data="#[Attr]"></div>',
-				'Expression "echo #[Attr];" failed to parse: syntax error, unexpected token ";", expecting "function" or "fn" or "static" or "#["'
+				'Expression "#[Attr]" failed to parse: syntax error, unexpected token ";"'
 			],
 			'invalid heredoc syntax' => [
 				'<div :content="<<<EOD\ntest\nEOD"></div>',
-				'Expression "echo <<<EOD\ntest\nEOD;" failed to parse: syntax error, unexpected token "<<"'
+				'Expression "<<<EOD\ntest\nEOD" failed to parse: syntax error, unexpected token "<<", expecting end of file'
 			]
 		];
 	}
@@ -99,15 +99,15 @@ final class GeneratedExceptionTest extends TestCase
 		return [
 			'invalid if condition' => [
 				'<div v-if="if($x) { }"></div>',
-				'Expression "if(if($x) { });" failed to parse:'
+				'Expression "if(if($x) { })" failed to parse: syntax error, unexpected token "if"'
 			],
 			'invalid for syntax' => [
 				'<div v-for="foreach($x as $y) { }"></div>',
-				'Expression "foreach(foreach($x as $y) { });" failed to parse:'
+				'foreach(foreach($x as $y) { })" failed to parse: syntax error, unexpected token "foreach"'
 			],
 			'invalid else-if condition' => [
 				'<div v-else-if="class Test { }"></div>',
-				'Previous sibling must be a DOM element'
+				'Expression "if(class Test { })" failed to parse: syntax error, unexpected token "class"'
 			],
 			'mixed directives' => [
 				'<div v-if="$test" v-else></div>',
@@ -229,27 +229,27 @@ final class GeneratedExceptionTest extends TestCase
 		return [
 			'T_ATTRIBUTE (#[])' => [
 				'<div>{{ #[Test] class MyTest {} }}</div>',
-				'Expression "echo #[Test] class MyTest {};" failed to parse: syntax error, unexpected token "class", expecting "function" or "fn" or "static" or "#["'
+				'Token T_ATTRIBUTE is disallowed in expression "#[Test] class MyTest {}"'
 			],
 			'T_CLASS' => [
 				'<div>{{ class MyTest {} }}</div>',
-				'Expression "echo class MyTest {};" failed to parse: syntax error, unexpected token "class"'
+				'Token T_CLASS is disallowed in expression "class MyTest {}"'
 			],
 			'T_CLOSE_TAG' => [
-				'<div>{{ echo "test"; ?> }}</div>',
-				'Expression "echo echo "test"; ?>;" failed to parse: syntax error, unexpected token "echo"'
+				'<div>{{ "test" ?> }}</div>',
+				'Expression ""test" ?>" was misparsed'
 			],
 			'T_COMMENT (single line)' => [
 				'<div>{{ $test // comment }}</div>',
-				'Expression "echo $test // comment;" failed to parse: syntax error, unexpected end of file, expecting "," or ";"'
+				'Token T_COMMENT is disallowed in expression "$test // comment"'
 			],
 			'T_COMMENT (multi line)' => [
 				'<div>{{ $test /* comment */ }}</div>',
-				'Token T_COMMENT is disallowed in expression "echo $test /* comment */;"'
+				'Token T_COMMENT is disallowed in expression "$test /* comment */"'
 			],
 			'T_DOC_COMMENT' => [
 				'<div>{{ /** doc comment */ $test }}</div>',
-				'Token T_DOC_COMMENT is disallowed in expression "echo /** doc comment */ $test;"'
+				'Token T_DOC_COMMENT is disallowed in expression "/** doc comment */ $test"'
 			],
 			'T_INLINE_HTML' => [
 				'<div>{{ ?> test <?php }}</div>',
@@ -271,35 +271,35 @@ final class GeneratedExceptionTest extends TestCase
 			],
 			'binding with T_ATTRIBUTE' => [
 				'<div :attr="#[Test]"></div>',
-				'Expression "echo #[Test];" failed to parse: syntax error, unexpected token ";", expecting "function" or "fn" or "static" or "#["'
+				'Expression "#[Test]" failed to parse: syntax error, unexpected token ";"'
 			],
 			'binding with T_CLASS' => [
 				'<div :attr="class Test {}"></div>',
-				'Expression "echo class Test {};" failed to parse: syntax error, unexpected token "class"'
+				'Token T_CLASS is disallowed in expression "class Test {}"'
 			],
 			'v-if with T_CLASS' => [
 				'<div v-if="class Test {}"></div>',
-				'Expression "if(class Test {});" failed to parse: syntax error, unexpected token "class"'
+				'Expression "if(class Test {})" failed to parse: syntax error, unexpected token "class"'
 			],
 			'v-else-if with T_CLASS' => [
 				'<test><div v-if="$test"></div><div v-else-if="class Test {}"></div></test>',
-				'Expression "if(class Test {});" failed to parse: syntax error, unexpected token "class"'
+				'Expression "if(class Test {})" failed to parse: syntax error, unexpected token "class"'
 			],
 			'mustache with declare' => [
 				'<div>{{ declare(strict_types=1) }}</div>',
-				'Expression "echo declare(strict_types=1);" failed to parse: syntax error, unexpected token "declare"'
+				'Token T_DECLARE is disallowed in expression "declare(strict_types=1)"'
 			],
 			'binding with declare' => [
 				'<div :attr="declare(strict_types=1)"></div>',
-				'Expression "echo declare(strict_types=1);" failed to parse: syntax error, unexpected token "declare"'
+				'Token T_DECLARE is disallowed in expression "declare(strict_types=1)"'
 			],
 			'mustache with php close tag' => [
-				'<div>{{ $test;?> }}</div>',
-				'Token T_CLOSE_TAG is disallowed in expression "echo $test;?>;"'
+				'<div>{{ $test?> }}</div>',
+				'Expression "$test?>" was misparsed'
 			],
 			'binding with php close tag' => [
-				'<div :attr="$test;?>"></div>',
-				'Token T_CLOSE_TAG is disallowed in expression "echo $test;?>;"'
+				'<div :attr="$test?>"></div>',
+				'Expression "$test?>" was misparsed'
 			]
 		];
 	}

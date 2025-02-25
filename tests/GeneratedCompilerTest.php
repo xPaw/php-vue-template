@@ -122,11 +122,11 @@ final class GeneratedCompilerTest extends TestCase
 		return [
 			'invalid PHP in mustache' => [
 				'<div>{{ $obj-> }}</div>',
-				'Expression "echo $obj->;" failed to parse: syntax error, unexpected token ";"'
+				'Expression "$obj->" failed to parse: syntax error, unexpected token ";", expecting identifier or variable or "{" or "$"'
 			],
 			'invalid for loop syntax' => [
 				'<div v-for="$items as"></div>',
-				'Expression "foreach($items as);" failed to parse: syntax error, unexpected token ")"'
+				'Expression "foreach($items as)" failed to parse: syntax error, unexpected token ")"'
 			],
 			'v-else without previous v-if' => [
 				'<div>text</div><span v-else></span>',
@@ -293,19 +293,19 @@ final class GeneratedCompilerTest extends TestCase
 		return [
 			'incomplete ternary' => [
 				'<div>{{ $condition ? }}</div>',
-				'Expression "echo $condition ?;" failed to parse:'
+				'Expression "$condition ?" failed to parse: syntax error, unexpected token ">"'
 			],
 			'invalid array access' => [
 				'<div>{{ $array[ }}</div>',
-				'Expression "echo $array[;" failed to parse:'
+				'Expression "$array[" failed to parse: syntax error, unexpected token ";", expecting "]"'
 			],
 			'unclosed method call' => [
 				'<div>{{ $object->method( }}</div>',
-				'Expression "echo $object->method(;" failed to parse:'
+				'Expression "$object->method(" failed to parse: syntax error, unexpected token ";"'
 			],
 			'invalid v-for syntax' => [
 				'<div v-for="$items as as $item"></div>',
-				'Expression "foreach($items as as $item);" failed to parse:'
+				'Expression "foreach($items as as $item)" failed to parse: syntax error, unexpected token "as"'
 			]
 		];
 	}
@@ -476,7 +476,7 @@ final class GeneratedCompilerTest extends TestCase
 		return [
 			'empty mustache' => [
 				'<div>{{ }}</div>',
-				'Expression "echo ;" failed to parse: syntax error, unexpected token ";"'
+				'Mustache tag is empty'
 			],
 			'empty v-if' => [
 				'<div v-if=""></div>',
@@ -492,17 +492,17 @@ final class GeneratedCompilerTest extends TestCase
 			],
 			'empty dynamic attribute' => [
 				'<div :attr=""></div>',
-				'Expression "echo ;" failed to parse: syntax error, unexpected token ";"'
+				'Attribute is empty'
 			],
 			'whitespace-only mustache' => [
 				'<div>{{
 
 				}}</div>',
-				'Expression "echo ;" failed to parse: syntax error, unexpected token ";"'
+				'Mustache tag is empty'
 			],
 			'whitespace-only dynamic attr' => [
 				'<div :attr="  "></div>',
-				'Expression "echo   ;" failed to parse: syntax error, unexpected token ";"'
+				'Attribute is empty'
 			]
 		];
 	}

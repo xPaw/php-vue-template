@@ -122,7 +122,7 @@ final class SyntaxErrorTest extends TestCase
 	public function testEmptyMustache(): void
 	{
 		$this->expectException( SyntaxError::class );
-		$this->expectExceptionMessage( 'Expression "echo ;" failed to parse: syntax error, unexpected token ";"' );
+		$this->expectExceptionMessage( 'Mustache tag is empty' );
 
 		self::code( '<div>{{}}</div>' );
 	}
@@ -130,7 +130,7 @@ final class SyntaxErrorTest extends TestCase
 	public function testSpaceMustache(): void
 	{
 		$this->expectException( SyntaxError::class );
-		$this->expectExceptionMessage( 'Expression "echo ;" failed to parse: syntax error, unexpected token ";"' );
+		$this->expectExceptionMessage( 'Mustache tag is empty' );
 
 		self::code( '<div>{{ }}</div>' );
 	}
@@ -138,7 +138,7 @@ final class SyntaxErrorTest extends TestCase
 	public function testEmptyNoEscapeMustache(): void
 	{
 		$this->expectException( SyntaxError::class );
-		$this->expectExceptionMessage( 'Expression "echo ;" failed to parse: syntax error, unexpected token ";"' );
+		$this->expectExceptionMessage( 'Mustache tag is empty' );
 
 		self::code( '<div>{{{}}}</div>' );
 	}
@@ -146,7 +146,7 @@ final class SyntaxErrorTest extends TestCase
 	public function testSpaceNoEscapeMustache(): void
 	{
 		$this->expectException( SyntaxError::class );
-		$this->expectExceptionMessage( 'Expression "echo ;" failed to parse: syntax error, unexpected token ";"' );
+		$this->expectExceptionMessage( 'Mustache tag is empty' );
 
 		self::code( '<div>{{{ }}}</div>' );
 	}
@@ -164,7 +164,7 @@ final class SyntaxErrorTest extends TestCase
 	public function testBadPhp() : void
 	{
 		$this->expectException( SyntaxError::class );
-		$this->expectExceptionMessage( 'Expression "echo , "test";" failed to parse: syntax error, unexpected token ","' );
+		$this->expectExceptionMessage( 'Expression ", "test"" failed to parse: syntax error, unexpected token ",", expecting end of file' );
 
 		self::code( '<div>{{ , "test" }}</div>' );
 	}
@@ -172,15 +172,15 @@ final class SyntaxErrorTest extends TestCase
 	public function testPhpNoCloseTag() : void
 	{
 		$this->expectException( SyntaxError::class );
-		$this->expectExceptionMessage( 'Token T_CLOSE_TAG is disallowed in expression "echo 1;?>;' );
+		$this->expectExceptionMessage( 'Expression "1?>" was misparsed' );
 
-		self::code( '<div>{{ 1;?> }}</div>' );
+		self::code( '<div>{{ 1?> }}</div>' );
 	}
 
 	public function testPhpNoMultilineComment() : void
 	{
 		$this->expectException( SyntaxError::class );
-		$this->expectExceptionMessage( 'Token T_COMMENT is disallowed in expression "echo 1/* test */;"' );
+		$this->expectExceptionMessage( 'Token T_COMMENT is disallowed in expression "1/* test */"' );
 
 		self::code( '<div>{{ 1/* test */ }}</div>' );
 	}
@@ -188,7 +188,7 @@ final class SyntaxErrorTest extends TestCase
 	public function testPhpNoComment() : void
 	{
 		$this->expectException( SyntaxError::class );
-		$this->expectExceptionMessage( "Token T_COMMENT is disallowed in expression \"echo 1//\n;;\"" );
+		$this->expectExceptionMessage( "Token T_COMMENT is disallowed in expression \"1//\n;\"" );
 
 		self::code( "<div>{{ 1//\n; }}</div>" );
 	}
@@ -196,7 +196,7 @@ final class SyntaxErrorTest extends TestCase
 	public function testPhpNoClass() : void
 	{
 		$this->expectException( SyntaxError::class );
-		$this->expectExceptionMessage( 'Token T_CLASS is disallowed in expression "class HelloWorld {};' );
+		$this->expectExceptionMessage( 'Token T_CLASS is disallowed in expression "class HelloWorld {}"' );
 
 		self::code( '<div>{{= class HelloWorld {} }}</div>' );
 	}
@@ -204,7 +204,7 @@ final class SyntaxErrorTest extends TestCase
 	public function testPhpNoDeclare() : void
 	{
 		$this->expectException( SyntaxError::class );
-		$this->expectExceptionMessage( 'Token T_DECLARE is disallowed in expression "declare(strict_types=1);' );
+		$this->expectExceptionMessage( 'Token T_DECLARE is disallowed in expression "declare(strict_types=1)"' );
 
 		self::code( '<div>{{= declare(strict_types=1) }}</div>' );
 	}
@@ -212,7 +212,7 @@ final class SyntaxErrorTest extends TestCase
 	public function testPhpNoAttribute() : void
 	{
 		$this->expectException( SyntaxError::class );
-		$this->expectExceptionMessage( 'Token T_ATTRIBUTE is disallowed in expression "#[HelloWorld] class HelloWorld {};' );
+		$this->expectExceptionMessage( 'Token T_ATTRIBUTE is disallowed in expression "#[HelloWorld] class HelloWorld {}"' );
 
 		self::code( '<div>{{= #[HelloWorld] class HelloWorld {} }}</div>' );
 	}

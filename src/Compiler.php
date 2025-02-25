@@ -16,6 +16,101 @@ class Compiler
 	private const ATTR_FOR = 'v-for';
 	private const ATTR_PRE = 'v-pre';
 
+	// https://www.php.net/manual/en/tokens.php
+	private const array ASSIGNMENT_OPERATORS =
+	[
+		'=',              // =
+		T_AND_EQUAL,      // &=
+		T_COALESCE_EQUAL, // ??=
+		T_CONCAT_EQUAL,   // .=
+		T_DIV_EQUAL,      // /=
+		T_MINUS_EQUAL,    // -=
+		T_MOD_EQUAL,      // %=
+		T_MUL_EQUAL,      // *=
+		T_OR_EQUAL,       // |=
+		T_PLUS_EQUAL,     // +=
+		T_POW_EQUAL,      // **=
+		T_SL_EQUAL,       // <<=
+		T_SR_EQUAL,       // >>=
+		T_XOR_EQUAL,      // ^=
+	];
+
+	private const array ALLOWED_TOKENS =
+	[
+		'-',
+		',',
+		':',
+		'!',
+		'?',
+		'.',
+		'(',
+		')',
+		'[',
+		']',
+		'*',
+		'/',
+		'&',
+		'%',
+		'+',
+		'<',
+		'=',
+		'>',
+		'|',
+		'~',
+		'$',
+		T_AND_EQUAL,                  // &=
+		T_ARRAY_CAST,                 // (array)
+		T_BOOL_CAST,                  // (bool) or (boolean)
+		T_BOOLEAN_AND,                // &&
+		T_BOOLEAN_OR,                 // ||
+		T_COALESCE_EQUAL,             // ??=
+		T_COALESCE,                   // ??
+		T_CONCAT_EQUAL,               // .=
+		T_CONSTANT_ENCAPSED_STRING,   // "foo" or 'bar'
+		T_DEC,                        // --
+		T_DIV_EQUAL,                  // /=
+		T_DNUMBER,                    // 0.12, etc.
+		T_DOUBLE_ARROW,               // =>
+		T_DOUBLE_CAST,                // (real), (double) or (float)
+		T_DOUBLE_COLON,               // ::
+		T_ELSE,                       // else
+		T_ELSEIF,                     // elseif
+		T_EMPTY,                      // empty
+		T_FN,                         // fn (arrow functions)
+		T_IF,                         // if
+		T_INC,                        // ++
+		T_INT_CAST,                   // (int) or (integer)
+		T_IS_EQUAL,                   // ==
+		T_IS_GREATER_OR_EQUAL,        // >=
+		T_IS_IDENTICAL,               // ===
+		T_IS_NOT_EQUAL,               // != or <>
+		T_IS_NOT_IDENTICAL,           // !==
+		T_IS_SMALLER_OR_EQUAL,        // <=
+		T_ISSET,                      // isset()
+		T_LNUMBER,                    // 123, 012, 0x1ac, etc.
+		T_MINUS_EQUAL,                // -=
+		T_MOD_EQUAL,                  // %=
+		T_MUL_EQUAL,                  // *=
+		T_NAME_FULLY_QUALIFIED,       // \App\Namespace
+		T_OBJECT_CAST,                // (object)
+		T_OBJECT_OPERATOR,            // ->
+		T_OR_EQUAL,                   // |=
+		T_PLUS_EQUAL,                 // +=
+		T_POW_EQUAL,                  // **=
+		T_POW,                        // **
+		T_SL_EQUAL,                   // <<=
+		T_SL,                         // <<
+		T_SPACESHIP,                  // <=>
+		T_SR_EQUAL,                   // >>=
+		T_SR,                         // >>
+		T_STRING_CAST,                // (string)
+		T_STRING,                     // parent, self, etc.
+		T_UNSET,                      // unset()
+		T_VARIABLE,                   // $foo
+		T_WHITESPACE,                 // \t \r\n
+		T_XOR_EQUAL,                  // ^=
+	];
+
 	private \Dom\HTMLDocument $DOM;
 
 	/** @var array<int, string> */
@@ -236,12 +331,19 @@ class Compiler
 		{
 			$node->removeAttributeNode( $attribute );
 
-			if( empty( $attribute->value ) )
+			$raw = \trim( $attribute->value );
+
+			if( empty( $raw ) )
 			{
 				throw new SyntaxError( "Attribute $attribute->name must not be empty", $node->getLineNo() );
 			}
 
-			$this->ValidateExpression( "if($attribute->value);", $node->getLineNo() );
+			$tokens = $this->ValidateExpression( "if($raw)", $node->getLineNo() );
+
+			if( empty( $tokens ) )
+			{
+				throw new SyntaxError( "Attribute $attribute->name must not be empty", $node->getLineNo() );
+			}
 
 			/** @var \Dom\HTMLElement */
 			$newNode = $this->DOM->createElement( $this->expressionTag );
@@ -250,7 +352,7 @@ class Compiler
 			$node->parentNode->replaceChild( $newNode, $node );
 			$newNode->appendChild( $node );
 
-			$this->expressions[ $this->expressionCount ] = "if($attribute->value){";
+			$this->expressions[ $this->expressionCount ] = "if($raw){";
 			$this->expressionCount++;
 		}
 
@@ -261,14 +363,21 @@ class Compiler
 		{
 			$node->removeAttributeNode( $attribute );
 
-			if( empty( $attribute->value ) )
+			$raw = \trim( $attribute->value );
+
+			if( empty( $raw ) )
+			{
+				throw new SyntaxError( "Attribute $attribute->name must not be empty", $node->getLineNo() );
+			}
+
+			$tokens = $this->ValidateExpression( "if($raw)", $node->getLineNo() );
+
+			if( empty( $tokens ) )
 			{
 				throw new SyntaxError( "Attribute $attribute->name must not be empty", $node->getLineNo() );
 			}
 
 			$testPreviousSibling( $attribute->name, $node, $newNode );
-
-			$this->ValidateExpression( "if($attribute->value);", $node->getLineNo() );
 
 			/** @var \Dom\HTMLElement */
 			$newNode = $this->DOM->createElement( $this->expressionTag );
@@ -277,7 +386,7 @@ class Compiler
 			$node->parentNode->replaceChild( $newNode, $node );
 			$newNode->appendChild( $node );
 
-			$this->expressions[ $this->expressionCount ] = "elseif($attribute->value){";
+			$this->expressions[ $this->expressionCount ] = "elseif($raw){";
 			$this->expressionCount++;
 		}
 
@@ -316,7 +425,7 @@ class Compiler
 				throw new SyntaxError( "Attribute $attribute->name must not be empty", $node->getLineNo() );
 			}
 
-			$this->ValidateExpression( "foreach($attribute->value);", $node->getLineNo() );
+			$this->ValidateExpression( "foreach($attribute->value)", $node->getLineNo(), isForeach: true );
 
 			$newNodeFor = $this->DOM->createElement( $this->expressionTag );
 			$newNodeFor->setAttribute( 'c', (string)$this->expressionCount );
@@ -353,10 +462,16 @@ class Compiler
 				continue;
 			}
 
-			$this->ValidateExpression( "echo $attribute->value;", $node->getLineNo() );
+			$raw = \trim( $attribute->value );
+			$tokens = $this->ValidateExpression( $raw, $node->getLineNo() );
+
+			if( empty( $tokens ) )
+			{
+				throw new SyntaxError( 'Attribute is empty', $node->getLineNo() );
+			}
 
 			$newAttribute = $this->DOM->createAttribute( \substr( $attribute->name, 1 ) );
-			$newAttribute->value = "<?php echo \htmlspecialchars($attribute->value, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, 'UTF-8'); ?>";
+			$newAttribute->value = "<?php echo \htmlspecialchars($raw, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, 'UTF-8'); ?>";
 			$attributes[] = $newAttribute;
 		}
 
@@ -479,7 +594,12 @@ class Compiler
 
 		$raw = \trim( $raw );
 
-		$this->ValidateExpression( $noEcho ? "$raw;" : "echo $raw;", $node->getLineNo() );
+		$tokens = $this->ValidateExpression( $raw, $node->getLineNo() );
+
+		if( empty( $tokens ) )
+		{
+			throw new SyntaxError( 'Mustache tag is empty', $node->getLineNo() );
+		}
 
 		if( $noEcho )
 		{
@@ -503,49 +623,30 @@ class Compiler
 		}
 	}
 
-	private function ValidateExpression( string $expression, int $line ) : void
+	/** @return \PhpToken[] */
+	private function ValidateExpression( string $expression, int $line, bool $isForeach = false ) : array
 	{
 		try
 		{
-			$tokens = \PhpToken::tokenize( "<?php $expression", TOKEN_PARSE );
+			$tokens = \PhpToken::tokenize( "<?php {$expression}?>", TOKEN_PARSE );
 		}
 		catch( \Throwable $e )
 		{
 			throw new SyntaxError( "Expression \"$expression\" failed to parse: {$e->getMessage()}", $line, $e );
 		}
 
-		$disallowedTokens =
-		[
-			T_ATTRIBUTE, // #[
-			T_CLASS, // class
-			T_CLOSE_TAG, // ?\> or %>
-			T_COMMENT, // // or #, and /* */
-			T_DECLARE, // declare
-			T_DOC_COMMENT, // /** */
-			T_END_HEREDOC, // heredoc end
-			T_INLINE_HTML, // text outside PHP
-			T_OPEN_TAG_WITH_ECHO, // <?= or <%=
-			T_OPEN_TAG, // <?php, <? or <%
-			T_START_HEREDOC, // <<<
-		];
+		if( !\array_shift( $tokens )->is( T_OPEN_TAG ) )
+		{
+			throw new SyntaxError( "Expression \"$expression\" was misparsed", $line );
+		}
+
+		if( !\array_pop( $tokens )->is( T_CLOSE_TAG ) )
+		{
+			throw new SyntaxError( "Expression \"$expression\" was misparsed", $line );
+		}
 
 		foreach( $tokens as $i => $token )
 		{
-			if( $i === 0 )
-			{
-				if( !$token->is( T_OPEN_TAG ) )
-				{
-					throw new SyntaxError( "Expression \"$expression\" was misparsed", $line );
-				}
-
-				continue;
-			}
-
-			if( $token->is( $disallowedTokens ) )
-			{
-				throw new SyntaxError( "Token {$token->getTokenName()} is disallowed in expression \"$expression\"", $line );
-			}
-
 			// @codeCoverageIgnoreStart
 			if( $this->Debug )
 			{
@@ -553,6 +654,37 @@ class Compiler
 				print_r( $token );
 			}
 			// @codeCoverageIgnoreEnd
+
+			if( !$token->is( self::ALLOWED_TOKENS ) )
+			{
+				if( $isForeach && $token->is( [ T_FOREACH, T_AS ] ) )
+				{
+					continue;
+				}
+
+				throw new SyntaxError( "Token {$token->getTokenName()} is disallowed in expression \"{$expression}\"", $line );
+			}
 		}
+
+		return $tokens;
+	}
+
+	/** @param \PhpToken[] $tokens */
+	private static function ExpressionShouldEcho( array $tokens ) : bool
+	{
+		if( $tokens[ 0 ]->is( \T_UNSET ) ) // $var|unset
+		{
+			return false;
+		}
+
+		foreach( $tokens as $token )
+		{
+			if( $token->is( self::ASSIGNMENT_OPERATORS ) )
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 }
