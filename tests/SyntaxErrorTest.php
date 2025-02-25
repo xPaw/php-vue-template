@@ -216,4 +216,20 @@ final class SyntaxErrorTest extends TestCase
 
 		self::code( '<div>{{= #[HelloWorld] class HelloWorld {} }}</div>' );
 	}
+
+	public function testBasicAssignmentModifier(): void
+	{
+		$this->expectException( SyntaxError::class );
+		$this->expectExceptionMessage( 'Mustache tags with assigments should not use {{= modifier' );
+
+		self::code( '<div>{{= $var = 123 }}</div>' );
+	}
+
+	public function testBasicAssignmentNoEscape(): void
+	{
+		$this->expectException( SyntaxError::class );
+		$this->expectExceptionMessage( 'Mustache tags with assigments should not use {{{ modifier' );
+
+		self::code( '<div>{{{ $var = 123 }}}</div>' );
+	}
 }

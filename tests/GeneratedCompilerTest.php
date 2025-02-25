@@ -110,8 +110,8 @@ final class GeneratedCompilerTest extends TestCase
 	#[DataProvider('provideInvalidSyntax')]
 	public function testInvalidSyntax(string $input, string $expectedMessage): void
 	{
-		$this->expectException(SyntaxError::class);
-		$this->expectExceptionMessage($expectedMessage);
+		static::expectException(SyntaxError::class);
+		static::expectExceptionMessage($expectedMessage);
 
 		self::code($input);
 	}
@@ -281,8 +281,8 @@ final class GeneratedCompilerTest extends TestCase
 	#[DataProvider('provideEdgeCaseErrors')]
 	public function testEdgeCaseErrors(string $input, string $expectedMessage): void
 	{
-		$this->expectException(SyntaxError::class);
-		$this->expectExceptionMessage($expectedMessage);
+		static::expectException(SyntaxError::class);
+		static::expectExceptionMessage($expectedMessage);
 
 		self::code($input);
 	}
@@ -453,8 +453,8 @@ final class GeneratedCompilerTest extends TestCase
 	#[DataProvider('provideEmptyElementsWithExceptions')]
 	public function testEmptyElementsWithExceptions(string $input, string $expectedMessage): void
 	{
-		$this->expectException(SyntaxError::class);
-		$this->expectExceptionMessage($expectedMessage);
+		static::expectException(SyntaxError::class);
+		static::expectExceptionMessage($expectedMessage);
 
 		self::code($input);
 	}
@@ -465,7 +465,7 @@ final class GeneratedCompilerTest extends TestCase
 	#[DataProvider('provideEmptyElementsRendering')]
 	public function testEmptyElementsRendering(string $input, string $expected): void
 	{
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 	}
 
 	/**
@@ -580,17 +580,17 @@ final class GeneratedCompilerTest extends TestCase
 	{
 		$input = "<$element/>";
 		$expected = "<$element>";
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 
 		// With attributes
 		$input = "<$element class=\"test\" id=\"test-id\"/>";
 		$expected = "<$element class=\"test\" id=\"test-id\">";
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 
 		// With dynamic attributes
 		$input = "<$element :class=\"\$dynamicClass\" :id=\"\$dynamicId\"/>";
 		$expected = "<$element class=\"<?php echo \htmlspecialchars(\$dynamicClass, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, 'UTF-8'); ?>\" id=\"<?php echo \htmlspecialchars(\$dynamicId, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, 'UTF-8'); ?>\">";
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 	}
 
 	/**
@@ -623,17 +623,17 @@ final class GeneratedCompilerTest extends TestCase
 		// Non-void elements should be corrected if self-closed
 		$input = '<div/>';
 		$expected = '<div></div>';
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 
 		// This should work with attributes too
 		$input = '<span class="test" id="id"/>';
 		$expected = '<span class="test" id="id"></span>';
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 
 		// And with dynamic attributes
 		$input = '<p :class="$cls"/>';
 		$expected = '<p class="<?php echo \htmlspecialchars($cls, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\'); ?>"></p>';
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 	}
 
 	/**
@@ -645,11 +645,11 @@ final class GeneratedCompilerTest extends TestCase
 		// v-if has higher precedence than v-for according to the compiler
 		$input = '<test><div v-if="$outer"><span v-if="$inner"></span></div></test>';
 		$expected = '<test><?php if($outer){?><div><?php if($inner){?><span></span><?php }?></div><?php }?></test>';
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 
 		// Test a more complex scenario with nested conditions and loops
 		$input = '<test><ul v-if="$hasItems"><li v-for="$items as $item" v-if="$item->show"></li><li v-else>Empty</li></ul><div v-else></div></test>';
 		$expected = '<test><?php if($hasItems){?><ul><?php if($item->show){foreach($items as $item){?><li></li><?php }}else{?><li>Empty</li><?php }?></ul><?php }else{?><div></div><?php }?></test>';
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 	}
 }

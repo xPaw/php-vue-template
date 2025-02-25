@@ -15,9 +15,9 @@ class Compiler
 	private const ATTR_ELSE_IF = 'v-else-if';
 	private const ATTR_FOR = 'v-for';
 	private const ATTR_PRE = 'v-pre';
+	private const ATTR_MUSTACHE_TAG = 'mustache-tag';
 
 	// https://www.php.net/manual/en/tokens.php
-	/** @var \PhpToken[] */
 	private const array ASSIGNMENT_OPERATORS =
 	[
 		'=',              // =
@@ -36,7 +36,6 @@ class Compiler
 		T_XOR_EQUAL,      // ^=
 	];
 
-	/** @var \PhpToken[] */
 	private const array ALLOWED_TOKENS =
 	[
 		'-',
@@ -76,6 +75,7 @@ class Compiler
 		T_DOUBLE_CAST,                // (real), (double) or (float)
 		T_DOUBLE_COLON,               // ::
 		T_EMPTY,                      // empty
+		T_ENCAPSED_AND_WHITESPACE,    // " $a"
 		T_FN,                         // fn (arrow functions)
 		T_INC,                        // ++
 		T_INT_CAST,                   // (int) or (integer)
@@ -143,7 +143,7 @@ class Compiler
 		$this->HandleDOM( $DOM );
 	}
 
-	private function HandleDOM( \Dom\HTMLDocument $DOM )
+	private function HandleDOM( \Dom\HTMLDocument $DOM ) : void
 	{
 		$this->expressions = [];
 		$this->expressionCount = 0;
@@ -593,11 +593,26 @@ class Compiler
 
 		$raw = \trim( $raw );
 
-		$tokens = $this->ValidateExpression( $raw, null, $node->getLineNo() );
+		$tokens = $this->ValidateExpression( $raw, self::ATTR_MUSTACHE_TAG, $node->getLineNo() );
 
 		if( empty( $tokens ) )
 		{
 			throw new SyntaxError( 'Mustache tag is empty', $node->getLineNo() );
+		}
+
+		if( !$this->ExpressionShouldEcho( $tokens ) )
+		{
+			if( $noEcho )
+			{
+				throw new SyntaxError( "Mustache tags with assigments should not use {{= modifier", $node->getLineNo() );
+			}
+
+			if( $noEscape )
+			{
+				throw new SyntaxError( "Mustache tags with assigments should not use {{{ modifier", $node->getLineNo() );
+			}
+
+			$noEcho = true;
 		}
 
 		if( $noEcho )
@@ -623,6 +638,7 @@ class Compiler
 	}
 
 	/**
+	 * @param self::ATTR_* $tokenType
 	 * @return \PhpToken[]
 	 */
 	private function ValidateExpression( string $expression, ?string $tokenType, int $line ) : array
@@ -636,19 +652,22 @@ class Compiler
 			throw new SyntaxError( "Expression \"$expression\" failed to parse: {$e->getMessage()}", $line, $e );
 		}
 
-		if( !\array_shift( $tokens )->is( T_OPEN_TAG ) )
+		$token = \array_shift( $tokens );
+		if( $token === null || !$token->is( T_OPEN_TAG ) )
 		{
 			throw new SyntaxError( "Expression \"$expression\" was misparsed", $line );
 		}
 
-		if( !\array_pop( $tokens )->is( T_CLOSE_TAG ) )
+		$token = \array_pop( $tokens );
+		if( $token === null || !$token->is( T_CLOSE_TAG ) )
 		{
 			throw new SyntaxError( "Expression \"$expression\" was misparsed", $line );
 		}
 
 		if( $tokenType === self::ATTR_IF || $tokenType === self::ATTR_ELSE_IF )
 		{
-			if( !\array_shift( $tokens )->is( T_IF ) )
+			$token = \array_shift( $tokens );
+			if( $token === null || !$token->is( T_IF ) )
 			{
 				throw new SyntaxError( "Expression \"$expression\" was misparsed", $line );
 			}
@@ -656,13 +675,16 @@ class Compiler
 
 		if( $tokenType === self::ATTR_FOR )
 		{
-			if( !\array_shift( $tokens )->is( T_FOREACH ) )
+			$token = \array_shift( $tokens );
+			if( $token === null || !$token->is( T_FOREACH ) )
 			{
 				throw new SyntaxError( "Expression \"$expression\" was misparsed", $line );
 			}
 		}
 
-		foreach( $tokens as $i => $token )
+		unset( $token );
+
+		foreach( $tokens as $token )
 		{
 			// @codeCoverageIgnoreStart
 			if( $this->Debug )
@@ -677,6 +699,11 @@ class Compiler
 				continue;
 			}
 
+			if( $tokenType === self::ATTR_MUSTACHE_TAG && $token->is( '"' ) )
+			{
+				continue;
+			}
+
 			if( !$token->is( self::ALLOWED_TOKENS ) )
 			{
 				throw new SyntaxError( "Token {$token->getTokenName()} is disallowed in expression \"{$expression}\"", $line );
@@ -687,9 +714,9 @@ class Compiler
 	}
 
 	/** @param \PhpToken[] $tokens */
-	private static function ExpressionShouldEcho( array $tokens ) : bool
+	private function ExpressionShouldEcho( array $tokens ) : bool
 	{
-		if( $tokens[ 0 ]->is( \T_UNSET ) ) // $var|unset
+		if( $tokens[ 0 ]->is( \T_UNSET ) ) // unset( $var );
 		{
 			return false;
 		}
