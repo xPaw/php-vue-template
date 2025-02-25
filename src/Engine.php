@@ -7,8 +7,8 @@ class Engine
 {
 	public bool $Precompiled = false;
 	public string $TemplateExtension = 'html';
-	public string $TemplateDirectiory = 'templates/';
-	public string $CacheDirectiory = 'cache/';
+	public string $TemplateDirectory = 'templates/';
+	public string $CacheDirectory = 'cache/';
 
 	/** @var array<string, mixed> */
 	public array $Variables = [];
@@ -54,8 +54,8 @@ class Engine
 	 */
 	public function CheckTemplate( string $template ) : string
 	{
-		$TemplateFilepath = $this->TemplateDirectiory . $template . '.' . $this->TemplateExtension;
-		$ParsedFilepath = $this->CacheDirectiory . 'rtpl_' . \preg_replace( '/[^a-zA-Z0-9_]/', '_', $template ) . '.php';
+		$TemplateFilepath = $this->TemplateDirectory . $template . '.' . $this->TemplateExtension;
+		$ParsedFilepath = $this->CacheDirectory . 'rtpl_' . \preg_replace( '/[^a-zA-Z0-9_]/', '_', $template ) . '.php';
 
 		if( $this->Precompiled )
 		{
