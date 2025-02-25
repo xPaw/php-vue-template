@@ -83,7 +83,7 @@ class Compiler
 		$this->InsertExpressions( $this->DOM );
 		$this->MergeAdjacentExpressions( $this->DOM );
 
-		$code = $this->DOM->saveHTML();
+		$code = $this->DOM->saveHtml();
 
 		// @codeCoverageIgnoreStart
 		if( $this->Debug )
@@ -341,6 +341,8 @@ class Compiler
 			$this->expressionCount++;
 		}
 
+		unset( $attribute );
+
 		/** @var \Dom\Attr $attribute */
 		foreach( \iterator_to_array( $node->attributes ) as $attribute )
 		{
@@ -360,6 +362,8 @@ class Compiler
 			$newAttribute->value = "<?php echo \htmlspecialchars($attribute->value, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, 'UTF-8'); ?>";
 			$attributes[] = $newAttribute;
 		}
+
+		unset( $attribute );
 
 		// Set new attributes after processing
 		foreach( $attributes as $attribute )

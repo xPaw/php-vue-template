@@ -19,7 +19,7 @@ final class GeneratedCompilerTest extends TestCase
 	#[DataProvider('provideNestedControlStructures')]
 	public function testNestedControlStructures(string $input, string $expected): void
 	{
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 	}
 
 	/** @return array<string, string[]> */
@@ -44,7 +44,7 @@ final class GeneratedCompilerTest extends TestCase
 	#[DataProvider('provideMustacheExpressions')]
 	public function testComplexMustacheExpressions(string $input, string $expected): void
 	{
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 	}
 
 	/** @return array<string, string[]> */
@@ -73,7 +73,7 @@ final class GeneratedCompilerTest extends TestCase
 	#[DataProvider('provideAttributeBindings')]
 	public function testComplexAttributeBindings(string $input, string $expected): void
 	{
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 	}
 
 	/** @return array<string, string[]> */
@@ -96,7 +96,7 @@ final class GeneratedCompilerTest extends TestCase
 		$input = '<test><ul v-for="$users as $id => $user"><li :data-id="$id"><span v-if="$user->isAdmin">Admin: </span>{{ $user->name }}<small v-if="$user->isOnline">online</small></li></ul></test>';
 		$expected = '<test><?php foreach($users as $id => $user){?><ul><li data-id="<?php echo \htmlspecialchars($id, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\'); ?>"><?php if($user->isAdmin){?><span>Admin: </span><?php }echo \htmlspecialchars($user->name, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\');if($user->isOnline){?><small>online</small><?php }?></li></ul><?php }?></test>';
 
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 	}
 
 	public function testPreWithComplexContent(): void
@@ -104,7 +104,7 @@ final class GeneratedCompilerTest extends TestCase
 		$input = '<div v-pre><span v-if="$condition">{{ $value }}</span><span v-for="$items as $item">{{ $item }}</span><span :class="$cls">{{ $text }}</span></div>';
 		$expected = '<div><span v-if="$condition">{{ $value }}</span><span v-for="$items as $item">{{ $item }}</span><span :class="$cls">{{ $text }}</span></div>';
 
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 	}
 
 	#[DataProvider('provideInvalidSyntax')]
@@ -140,7 +140,7 @@ final class GeneratedCompilerTest extends TestCase
 		$input = '<div>Start {{ $first }} <b>bold {{ $second }}</b> middle<i>italic {{ $third }}</i> {{ $fourth }} end</div>';
 		$expected = '<div>Start <?php echo \htmlspecialchars($first, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\');?> <b>bold <?php echo \htmlspecialchars($second, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\');?></b> middle<i>italic <?php echo \htmlspecialchars($third, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\');?></i> <?php echo \htmlspecialchars($fourth, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\');?> end</div>';
 
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 	}
 
 	public function testDeepNestedStructure(): void
@@ -148,13 +148,13 @@ final class GeneratedCompilerTest extends TestCase
 		$input = '<test><div v-if="$level1"><div v-for="$items1 as $item1">{{ $item1->title }}<div v-if="$item1->hasChildren"><ul v-for="$item1->children as $item2"><li v-if="$item2->isVisible">{{ $item2->name }}</li></ul></div></div></div></test>';
 		$expected = '<test><?php if($level1){?><div><?php foreach($items1 as $item1){?><div><?php echo \htmlspecialchars($item1->title, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\');if($item1->hasChildren){?><div><?php foreach($item1->children as $item2){?><ul><?php if($item2->isVisible){?><li><?php echo \htmlspecialchars($item2->name, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\');?></li><?php }?></ul><?php }?></div><?php }?></div><?php }?></div><?php }?></test>';
 
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 	}
 
 	#[DataProvider('provideWhitespaceHandling')]
 	public function testWhitespaceHandling(string $input, string $expected): void
 	{
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 	}
 
 	/** @return array<string, string[]> */
@@ -181,7 +181,7 @@ final class GeneratedCompilerTest extends TestCase
 	#[DataProvider('provideComplexMustacheOperations')]
 	public function testComplexMustacheOperations(string $input, string $expected): void
 	{
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 	}
 
 	/** @return array<string, string[]> */
@@ -210,7 +210,7 @@ final class GeneratedCompilerTest extends TestCase
 	#[DataProvider('provideNestedLoopEdgeCases')]
 	public function testNestedLoopEdgeCases(string $input, string $expected): void
 	{
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 	}
 
 	/** @return array<string, string[]> */
@@ -231,7 +231,7 @@ final class GeneratedCompilerTest extends TestCase
 	#[DataProvider('provideComplexAttributeCombinations')]
 	public function testComplexAttributeCombinations(string $input, string $expected): void
 	{
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 	}
 
 	/** @return array<string, string[]> */
@@ -250,13 +250,13 @@ final class GeneratedCompilerTest extends TestCase
 		$input = '<test><div v-if="$level1"><div v-for="$items1 as $item1"><div v-if="$item1->type === \'group\'"><h2>{{ $item1->title }}</h2><ul v-if="!empty($item1->children)"><li v-for="$item1->children as $child" :class="$child->status"><span v-if="$child->isHighlighted" class="highlight">★</span>{{ $child->name }}<small v-if="$child->hasDetails">({{ $child->details }})</small></li></ul><p v-else>No children available</p></div><div v-else-if="$item1->type === \'single\'">{{ $item1->content }}</div><div v-else>Unknown type</div></div></div></test>';
 		$expected = '<test><?php if($level1){?><div><?php foreach($items1 as $item1){?><div><?php if($item1->type === \'group\'){?><div><h2><?php echo \htmlspecialchars($item1->title, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\');?></h2><?php if(!empty($item1->children)){?><ul><?php foreach($item1->children as $child){?><li class="<?php echo \htmlspecialchars($child->status, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\'); ?>"><?php if($child->isHighlighted){?><span class="highlight">★</span><?php }echo \htmlspecialchars($child->name, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\');if($child->hasDetails){?><small>(<?php echo \htmlspecialchars($child->details, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\');?>)</small><?php }?></li><?php }?></ul><?php }else{?><p>No children available</p><?php }?></div><?php }elseif($item1->type === \'single\'){?><div><?php echo \htmlspecialchars($item1->content, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\');?></div><?php }else{?><div>Unknown type</div><?php }?></div><?php }?></div><?php }?></test>';
 
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 	}
 
 	#[DataProvider('provideSpecialCharacters')]
 	public function testSpecialCharacters(string $input, string $expected): void
 	{
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 	}
 
 	/** @return array<string, string[]> */
@@ -314,7 +314,7 @@ final class GeneratedCompilerTest extends TestCase
 	#[DataProvider('provideEmptyElements')]
 	public function testEmptyElements(string $input, string $expected): void
 	{
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 	}
 
 	public static function provideEmptyElements(): array
@@ -343,7 +343,7 @@ final class GeneratedCompilerTest extends TestCase
 	#[DataProvider('provideMalformedInput')]
 	public function testMalformedInput(string $input, string $expected): void
 	{
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 	}
 
 	/** @return array<string, string[]> */
@@ -368,7 +368,7 @@ final class GeneratedCompilerTest extends TestCase
 	#[DataProvider('provideScriptContent')]
 	public function testScriptContent(string $input, string $expected): void
 	{
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 	}
 
 	/** @return array<string, string[]> */
@@ -393,7 +393,7 @@ final class GeneratedCompilerTest extends TestCase
 	#[DataProvider('provideStyleContent')]
 	public function testStyleContent(string $input, string $expected): void
 	{
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 	}
 
 	/** @return array<string, string[]> */
@@ -416,7 +416,7 @@ final class GeneratedCompilerTest extends TestCase
 		$input = '<div v-pre><span v-if="$condition">{{ $value }}<div v-for="$items as $item"><p v-if="$item->show">{{ $item->text }}</p><p v-else>{{ $item->default }}</p></div></span><span v-else>{{ $alternate }}</span></div>';
 		$expected = '<div><span v-if="$condition">{{ $value }}<div v-for="$items as $item"><p v-if="$item->show">{{ $item-&gt;text }}</p><p v-else="">{{ $item-&gt;default }}</p></div></span><span v-else="">{{ $alternate }}</span></div>';
 
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 	}
 
 	public function testMultipleConditionsChain(): void
@@ -424,13 +424,13 @@ final class GeneratedCompilerTest extends TestCase
 		$input = '<div><p v-if="$type === \'a\'">A</p><p v-else-if="$type === \'b\'">B</p><p v-else-if="$type === \'c\'">C</p><p v-else-if="$type === \'d\'">D</p><p v-else>Other</p></div>';
 		$expected = '<div><?php if($type === \'a\'){?><p>A</p><?php }elseif($type === \'b\'){?><p>B</p><?php }elseif($type === \'c\'){?><p>C</p><?php }elseif($type === \'d\'){?><p>D</p><?php }else{?><p>Other</p><?php }?></div>';
 
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 	}
 
 	#[DataProvider('provideComplexExpressions')]
 	public function testComplexExpressions(string $input, string $expected): void
 	{
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 	}
 
 	/** @return array<string, string[]> */
@@ -455,7 +455,7 @@ final class GeneratedCompilerTest extends TestCase
 	#[DataProvider('provideCommentsHandling')]
 	public function testCommentsHandling(string $input, string $expected): void
 	{
-		$this->assertEquals($expected, self::code($input));
+		static::assertEquals($expected, self::code($input));
 	}
 
 	/** @return array<string, string[]> */

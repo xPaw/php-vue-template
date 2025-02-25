@@ -81,6 +81,9 @@ class Engine
 		$parsedCode = $compiler->OutputCode();
 
 		// write compiled file
-		\file_put_contents( $parsedTemplateFilepath, $parsedCode, LOCK_EX );
+		if( \file_put_contents( $parsedTemplateFilepath, $parsedCode, LOCK_EX ) === false )
+		{
+			throw new \Exception( 'Failed to write ' . $parsedTemplateFilepath );
+		}
 	}
 }
