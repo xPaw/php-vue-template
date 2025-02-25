@@ -32,19 +32,12 @@ class Compiler
 
 	public function Parse( string $Data ) : void
 	{
-		$this->expressions = [];
-		$this->expressionCount = 0;
-
-		$this->DOM = \Dom\HTMLDocument::createFromString( $Data, self::LIBXML_OPTIONS, 'UTF-8' );
-
-		$this->HandleNode( $this->DOM );
+		$DOM = \Dom\HTMLDocument::createFromString( $Data, self::LIBXML_OPTIONS, 'UTF-8' );
+		$this->HandleDOM( $DOM );
 	}
 
 	public function ParseFile( string $Filepath ) : void
 	{
-		$this->expressions = [];
-		$this->expressionCount = 0;
-
 		// @codeCoverageIgnoreStart
 		if( $this->Debug )
 		{
@@ -52,10 +45,14 @@ class Compiler
 		}
 		// @codeCoverageIgnoreEnd
 
-		//$previousUseError = libxml_use_internal_errors( true );
+		$DOM = \Dom\HTMLDocument::createFromFile( $Filepath, self::LIBXML_OPTIONS, 'UTF-8' );
+		$this->HandleDOM( $DOM );
+	}
 
-		// TODO: Handle loadHTML warnings, e.g. when html is not fully valid
-		$this->DOM = \Dom\HTMLDocument::createFromFile( $Filepath, self::LIBXML_OPTIONS, 'UTF-8' );
+	private function HandleDOM( \Dom\HTMLDocument $DOM )
+	{
+		$this->expressions = [];
+		$this->expressionCount = 0;
 
 		/*
 		$errors = libxml_get_errors();
@@ -71,10 +68,11 @@ class Compiler
 		// @codeCoverageIgnoreStart
 		if( $this->Debug )
 		{
-			echo '===== [2]' . PHP_EOL . $this->DOM->saveHtml() . PHP_EOL;
+			echo '===== [2]' . PHP_EOL . $DOM->saveHtml() . PHP_EOL;
 		}
 		// @codeCoverageIgnoreEnd
 
+		$this->DOM = $DOM;
 		$this->HandleNode( $this->DOM );
 	}
 
