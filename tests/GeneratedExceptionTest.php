@@ -303,4 +303,40 @@ final class GeneratedExceptionTest extends TestCase
 			]
 		];
 	}
+
+	public function testInvalidExpressionWithParsingError(): void
+	{
+		$this->expectException(SyntaxError::class);
+		$this->expectExceptionMessage('Expression "$test >" failed to parse');
+
+		self::code('<div>{{ $test > }}</div>');
+	}
+
+	#[DataProvider('provideInvalidExpressionTypes')]
+	public function testInvalidExpressionTypes(string $input, string $expectedMessage): void
+	{
+		$this->expectException(SyntaxError::class);
+		$this->expectExceptionMessage($expectedMessage);
+
+		self::code($input);
+	}
+
+	/** @return array<string, array{string, string}> */
+	public static function provideInvalidExpressionTypes(): array
+	{
+		return [
+			'invalid if expression' => [
+				'<div v-if="function() { }"></div>',
+				'Token T_FUNCTION is disallowed in expression "if(function() { })"'
+			],
+			'invalid foreach expression' => [
+				'<div v-for="echo $items as $item"></div>',
+				'Expression "foreach(echo $items as $item)" failed to parse: syntax error, unexpected token "echo"'
+			],
+			'invalid mustache expression' => [
+				'<div>{{ namespace Test; }}</div>',
+				'Token T_NAMESPACE is disallowed in expression "namespace Test;"'
+			]
+		];
+	}
 }

@@ -68,7 +68,7 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectException( SyntaxError::class );
 		$this->expectExceptionMessage( 'Attribute v-else-if must not be empty' );
 
-		self::code( '<div v-else-if></div>' );
+		self::code( '<div v-if="true"></div><div v-else-if></div>' );
 	}
 
 	public function testForNoCondition(): void
@@ -141,6 +141,14 @@ final class SyntaxErrorTest extends TestCase
 		$this->expectExceptionMessage( 'Mustache tag is empty' );
 
 		self::code( '<div>{{{}}}</div>' );
+	}
+
+	public function testComma(): void
+	{
+		$this->expectException( SyntaxError::class );
+		$this->expectExceptionMessage( 'Expression "$a, $b" failed to parse: syntax error, unexpected token ","' );
+
+		self::code( '<div>{{ $a, $b }}</div>' );
 	}
 
 	public function testSpaceNoEscapeMustache(): void

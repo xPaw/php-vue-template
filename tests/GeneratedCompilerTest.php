@@ -16,6 +16,255 @@ final class GeneratedCompilerTest extends TestCase
 		return $Template->OutputCode();
 	}
 
+
+	/**
+	 * Tests for tokens that should be echoed in mustache expressions
+	 * Note: Assignment operators have special handling and are tested separately
+	 */
+	#[DataProvider('provideEchoedTokens')]
+	public function testEchoedTokens(string $expression): void
+	{
+		$input = "<div>{{ $expression }}</div>";
+		$expected = "<div><?php echo \htmlspecialchars($expression, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, 'UTF-8');?></div>";
+
+		static::assertEquals($expected, self::code($input));
+	}
+
+	/**
+	 * @return array<string, array{string}>
+	 */
+	public static function provideEchoedTokens(): array
+	{
+		return [
+			// Simple tokens
+			'minus' => ['$a - $b'],
+			'colon' => ['$a ? $b : $c'],
+			'exclamation' => ['!$a'],
+			'question' => ['$a ? $b : $c'],
+			'dot' => ['$a . $b'],
+			'open parenthesis' => ['($a + $b)'],
+			'close parenthesis' => ['($a + $b)'],
+			'open bracket' => ['$array[$index]'],
+			'close bracket' => ['$array[$index]'],
+			'asterisk' => ['$a * $b'],
+			'slash' => ['$a / $b'],
+			'ampersand' => ['$a & $b'],
+			'percent' => ['$a % $b'],
+			'plus' => ['$a + $b'],
+			'less than' => ['$a < $b'],
+			'greater than' => ['$a > $b'],
+			'pipe' => ['$a | $b'],
+			'tilde' => ['~$a'],
+			'dollar sign' => ['$variable'],
+
+			// PHP tokens that should be echoed
+			'T_ARRAY_CAST' => ['(array)$var'],
+			'T_BOOL_CAST' => ['(bool)$var'],
+			'T_BOOLEAN_AND' => ['$a && $b'],
+			'T_BOOLEAN_OR' => ['$a || $b'],
+			'T_COALESCE' => ['$a ?? $b'],
+			'T_CONSTANT_ENCAPSED_STRING' => ['"hello world"'],
+			'T_DEC' => ['$a--'],
+			'T_DNUMBER' => ['3.14159'],
+			'T_DOUBLE_ARROW' => ['["key" => "value"]'],
+			'T_DOUBLE_CAST' => ['(float)$var'],
+			'T_DOUBLE_COLON' => ['MyClass::CONSTANT'],
+			'T_EMPTY' => ['empty($var)'],
+			'T_ENCAPSED_AND_WHITESPACE' => ['"value: $var"'],
+			'T_FN' => ['fn($x) => $x * $x'],
+			'T_INC' => ['$a++'],
+			'T_INT_CAST' => ['(int)$var'],
+			'T_IS_EQUAL' => ['$a == $b'],
+			'T_IS_GREATER_OR_EQUAL' => ['$a >= $b'],
+			'T_IS_IDENTICAL' => ['$a === $b'],
+			'T_IS_NOT_EQUAL' => ['$a != $b'],
+			'T_IS_NOT_IDENTICAL' => ['$a !== $b'],
+			'T_IS_SMALLER_OR_EQUAL' => ['$a <= $b'],
+			'T_ISSET' => ['isset($var)'],
+			'T_LNUMBER' => ['42'],
+			'T_NAME_FULLY_QUALIFIED' => ['\App\Namespace\Class'],
+			'T_OBJECT_CAST' => ['(object)$var'],
+			'T_OBJECT_OPERATOR' => ['$object->property'],
+			'T_POW' => ['$a ** $b'],
+			'T_SL' => ['$a << $b'],
+			'T_SPACESHIP' => ['$a <=> $b'],
+			'T_SR' => ['$a >> $b'],
+			'T_STRING_CAST' => ['(string)$var'],
+			'T_STRING' => ['strtoupper($string)'],
+			'T_VARIABLE' => ['$variable'],
+			'T_WHITESPACE' => ['$a    +   $b'],
+
+			// Complex combinations that should be echoed
+			'complex expression 1' => ['($a + $b) * ($c / $d)'],
+			'complex expression 2' => ['empty($a) && isset($b) ? $c : $d'],
+			'complex expression 3' => ['$user?->profile?->settings ?? []'],
+			'complex expression 4' => ['$a >= 0 && $a <= 100 ? "valid" : "invalid"'],
+			'complex expression 5' => ['array_map(fn($x) => $x * 2, $array)']
+		];
+	}
+
+	/**
+	 * Tests all assignment operators to ensure they're properly recognized
+	 * as assignments and not echoed in mustache tags
+	 */
+	#[DataProvider('provideAssignmentOperators')]
+	public function testAssignmentOperators(string $assignment): void
+	{
+		$input = "<div>{{ $assignment }}</div>";
+		// The assignment should not be echoed
+		$expected = "<div><?php $assignment;?></div>";
+
+		static::assertEquals($expected, self::code($input));
+	}
+
+	/**
+	 * @return array<string, array{string}>
+	 */
+	public static function provideAssignmentOperators(): array
+	{
+		return [
+			'simple assignment' => ['$a = $b'],
+			'AND_EQUAL' => ['$a &= $b'],
+			'COALESCE_EQUAL' => ['$a ??= $b'],
+			'CONCAT_EQUAL' => ['$a .= $b'],
+			'DIV_EQUAL' => ['$a /= $b'],
+			'MINUS_EQUAL' => ['$a -= $b'],
+			'MOD_EQUAL' => ['$a %= $b'],
+			'MUL_EQUAL' => ['$a *= $b'],
+			'OR_EQUAL' => ['$a |= $b'],
+			'PLUS_EQUAL' => ['$a += $b'],
+			'POW_EQUAL' => ['$a **= $b'],
+			'SL_EQUAL' => ['$a <<= $b'],
+			'SR_EQUAL' => ['$a >>= $b'],
+			'XOR_EQUAL' => ['$a ^= $b'],
+			'complex assignment' => ['$result = ($a + $b) * $c'],
+			'array assignment' => ['$arr[0] = $value'],
+			'object property assignment' => ['$obj->prop = $value'],
+			'nested assignment' => ['$a = $b = $c = 0']
+		];
+	}
+
+	/**
+	 * Tests all tokens in dynamic attributes
+	 */
+	#[DataProvider('provideDynamicAttributes')]
+	public function testTokensInDynamicAttributes(string $expression): void
+	{
+		$input = "<div :attr=\"$expression\"></div>";
+		$expected = "<div attr=\"<?php echo \htmlspecialchars($expression, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, 'UTF-8'); ?>\"></div>";
+
+		static::assertEquals($expected, self::code($input));
+	}
+
+	/**
+	 * @return array<string, array{string}>
+	 */
+	public static function provideDynamicAttributes(): array
+	{
+		return [
+			'simple variable' => ['$variable'],
+			'string concatenation' => ['\'prefix-\' . $id'],
+			'ternary operation' => ['$isActive ? \'active\' : \'inactive\''],
+			'numeric operation' => ['$a + $b * 2'],
+			'function call' => ['strtoupper($name)'],
+			'method call' => ['$object->getProperty()'],
+			'array access' => ['$array[$index]'],
+			'nested ternary' => ['$a ? ($b ? \'B\' : \'notB\') : \'notA\''],
+			'complex expression' => ['json_encode([\'id\' => $id, \'name\' => $name])']
+		];
+	}
+
+	/**
+	 * Tests all tokens in v-if conditions
+	 */
+	#[DataProvider('provideVIfConditions')]
+	public function testTokensInVIfConditions(string $condition): void
+	{
+		$input = "<test><div v-if=\"$condition\">content</div></test>";
+		$expected = "<test><?php if($condition){?><div>content</div><?php }?></test>";
+
+		static::assertEquals($expected, self::code($input));
+	}
+
+	/**
+	 * @return array<string, array{string}>
+	 */
+	public static function provideVIfConditions(): array
+	{
+		return [
+			'simple condition' => ['$showElement'],
+			'equality comparison' => ['$status === \'active\''],
+			'inequality comparison' => ['$count !== 0'],
+			'greater than' => ['$value > 100'],
+			'less than or equal' => ['$score <= 50'],
+			'logical AND' => ['$isAdmin && $hasPermission'],
+			'logical OR' => ['$isSubscribed || $isFreeContent'],
+			'negation' => ['!$isHidden'],
+			'function result' => ['count($items) > 0'],
+			'method call' => ['$user->hasRole(\'admin\')'],
+			'complex condition' => ['($type === \'post\' || $type === \'article\') && $isPublished']
+		];
+	}
+
+	/**
+	 * Tests all tokens in v-for loops
+	 */
+	#[DataProvider('provideVForLoops')]
+	public function testTokensInVForLoops(string $loop): void
+	{
+		$input = "<test><div v-for=\"$loop\">item</div></test>";
+		$expected = "<test><?php foreach($loop){?><div>item</div><?php }?></test>";
+
+		static::assertEquals($expected, self::code($input));
+	}
+
+	/**
+	 * @return array<string, array{string}>
+	 */
+	public static function provideVForLoops(): array
+	{
+		return [
+			'simple array' => ['$items as $item'],
+			'with key' => ['$items as $key => $value'],
+			'nested property' => ['$user->posts as $post'],
+			'array access' => ['$data[\'items\'] as $item'],
+			'method result' => ['$obj->getItems() as $item'],
+			'function result' => ['array_filter($items, fn($i) => $i > 0) as $item']
+		];
+	}
+
+	/**
+	 * Tests disallowed tokens to ensure they're properly rejected
+	 */
+	#[DataProvider('provideDisallowedTokens')]
+	public function testDisallowedTokens(string $expression, string $tokenType): void
+	{
+		$this->expectException(\xPaw\Template\SyntaxError::class);
+		$this->expectExceptionMessage("Token $tokenType is disallowed");
+
+		self::code("<div>{{ $expression }}</div>");
+	}
+
+	/**
+	 * @return array<string, array{string, string}>
+	 */
+	public static function provideDisallowedTokens(): array
+	{
+		return [
+			'T_CLASS' => ['class TestClass {}', 'T_CLASS'],
+			'T_FUNCTION' => ['function test() {}', 'T_FUNCTION'],
+			'T_NAMESPACE' => ['namespace Test;', 'T_NAMESPACE'],
+			'T_INTERFACE' => ['interface TestInterface {}', 'T_INTERFACE'],
+			'T_TRAIT' => ['trait TestTrait {}', 'T_TRAIT'],
+			'T_DECLARE' => ['declare(strict_types=1);', 'T_DECLARE'],
+			'T_ECHO' => ['echo $var;', 'T_ECHO'],
+			'T_INCLUDE' => ['include "file.php";', 'T_INCLUDE'],
+			'T_REQUIRE' => ['require "file.php";', 'T_REQUIRE'],
+			'T_COMMENT' => ['$var // comment', 'T_COMMENT'],
+			'T_DOC_COMMENT' => ['/** doc comment */ $var;', 'T_DOC_COMMENT']
+		];
+	}
+
 	#[DataProvider('provideNestedControlStructures')]
 	public function testNestedControlStructures(string $input, string $expected): void
 	{
@@ -651,5 +900,102 @@ final class GeneratedCompilerTest extends TestCase
 		$input = '<test><ul v-if="$hasItems"><li v-for="$items as $item" v-if="$item->show"></li><li v-else>Empty</li></ul><div v-else></div></test>';
 		$expected = '<test><?php if($hasItems){?><ul><?php if($item->show){foreach($items as $item){?><li></li><?php }}else{?><li>Empty</li><?php }?></ul><?php }else{?><div></div><?php }?></test>';
 		static::assertEquals($expected, self::code($input));
+	}
+
+	/**
+	 * Test complex combinations of v-pre with other directives
+	 */
+	public function testComplexPreDirective(): void
+	{
+		$input = '<div><div v-pre><span v-if="$condition">{{ $value }}</span><span v-for="$items as $item">{{ $item }}</span><span v-else>No items</span></div></div>';
+		$expected = '<div><div><span v-if="$condition">{{ $value }}</span><span v-for="$items as $item">{{ $item }}</span><span v-else="">No items</span></div></div>';
+
+		static::assertEquals($expected, self::code($input));
+	}
+
+	#[DataProvider('provideMessyMustacheExpressions')]
+	public function testMessyMustacheExpressions(string $input, string $expected): void
+	{
+		// Tests edge cases with mustache expressions
+		static::assertEquals($expected, self::code($input));
+	}
+
+	/** @return array<string, array{string, string}> */
+	public static function provideMessyMustacheExpressions(): array
+	{
+		return [
+			'mix of escaped and unescaped' => [
+				'<div>{{ $var1 }}{{{ $var2 }}}{{ $var3 }}</div>',
+				'<div><?php echo \htmlspecialchars($var1, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\');echo $var2;echo \htmlspecialchars($var3, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\');?></div>'
+			],
+			'mixed expressions with assignments' => [
+				'<div>{{ $var = 123 }}{{ $var + 5 }}</div>',
+				'<div><?php $var = 123;echo \htmlspecialchars($var + 5, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\');?></div>'
+			],
+			'complex nested expressions' => [
+				'<test><div v-if="$showHeader"><h1>{{ $title }}</h1></div><div v-for="$items as $i => $item"><span>{{ $i + 1 }}. {{ $item }}</span></div></test>',
+				'<test><?php if($showHeader){?><div><h1><?php echo \htmlspecialchars($title, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\');?></h1></div><?php }foreach($items as $i => $item){?><div><span><?php echo \htmlspecialchars($i + 1, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\');?>. <?php echo \htmlspecialchars($item, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\');?></span></div><?php }?></test>'
+			]
+		];
+	}
+
+	#[DataProvider('provideComplexDOMStructures')]
+	public function testComplexDOMStructures(string $input, string $expected): void
+	{
+		// Tests handling of complex nested structures
+		static::assertEquals($expected, self::code($input));
+	}
+
+	/** @return array<string, array{string, string}> */
+	public static function provideComplexDOMStructures(): array
+	{
+		return [
+			'deeply nested conditionals' => [
+				'<test><div v-if="$level1"><div v-if="$level2"><div v-if="$level3"><span v-if="$level4">content</span></div></div></div></test>',
+				'<test><?php if($level1){?><div><?php if($level2){?><div><?php if($level3){?><div><?php if($level4){?><span>content</span><?php }?></div><?php }?></div><?php }?></div><?php }?></test>',
+			],
+			'complex nested loops and conditions' => [
+				'<test><div v-for="$outer as $key => $value"><span v-if="$key % 2 === 0">even</span><span v-else>odd</span><div v-for="$value->items as $item">{{ $item }}</div></div></test>',
+				'<test><?php foreach($outer as $key => $value){?><div><?php if($key % 2 === 0){?><span>even</span><?php }else{?><span>odd</span><?php }foreach($value->items as $item){?><div><?php echo \htmlspecialchars($item, \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\');?></div><?php }?></div><?php }?></test>',
+			]
+		];
+	}
+
+	#[DataProvider('provideElseIfWithoutPreviousSibling')]
+	public function testElseIfWithoutPreviousSibling(string $input): void
+	{
+		// Testing line 376: Previous sibling element must have v-if or v-else-if
+		$this->expectException(SyntaxError::class);
+		$this->expectExceptionMessage('Previous sibling must be a DOM element');
+
+		self::code($input);
+	}
+
+	/** @return array<string, array{string}> */
+	public static function provideElseIfWithoutPreviousSibling(): array
+	{
+		return [
+			'else-if as first child' => ['<div><span v-else-if="$test"></span></div>'],
+			'else-if after text node' => ['<div>text<span v-else-if="$test"></span></div>']
+		];
+	}
+
+	#[DataProvider('provideDynamicAttributesWithEmptyValues')]
+	public function testDynamicAttributesWithEmptyValues(string $input): void
+	{
+		$this->expectException(SyntaxError::class);
+		$this->expectExceptionMessage('Attribute is empty');
+
+		self::code($input);
+	}
+
+	/** @return array<string, array{string}> */
+	public static function provideDynamicAttributesWithEmptyValues(): array
+	{
+		return [
+			'empty dynamic attribute' => ['<div :attr=""></div>'],
+			'whitespace only dynamic attribute' => ['<div :attr="  "></div>'],
+			'tab only dynamic attribute' => ["<div :attr=\"\t\"></div>"]
+		];
 	}
 }

@@ -91,6 +91,7 @@ class Compiler
 		T_MOD_EQUAL,                  // %=
 		T_MUL_EQUAL,                  // *=
 		T_NAME_FULLY_QUALIFIED,       // \App\Namespace
+		T_NULLSAFE_OBJECT_OPERATOR,   // ?->
 		T_OBJECT_CAST,                // (object)
 		T_OBJECT_OPERATOR,            // ->
 		T_OR_EQUAL,                   // |=

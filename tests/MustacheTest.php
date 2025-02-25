@@ -45,6 +45,11 @@ final class MustacheTest extends TestCase
 		static::assertEquals( '<span><?php echo \htmlspecialchars("Hey $hello", \ENT_QUOTES|\ENT_SUBSTITUTE|\ENT_DISALLOWED|\ENT_HTML5, \'UTF-8\');?></span>', self::code( '<span>{{ "Hey $hello" }}</span>' ) );
 	}
 
+	public function testUnsetCall(): void
+	{
+		static::assertEquals( '<span><?php unset( $a );?></span>', self::code( '<span>{{ unset( $a ) }}</span>' ) );
+	}
+
 	public function testMultipleMustachesInSameTextNode(): void
 	{
 		static::assertEquals(
