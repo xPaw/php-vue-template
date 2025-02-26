@@ -331,7 +331,7 @@ class Compiler
 		{
 			$node->removeAttributeNode( $attribute );
 
-			$raw = \trim( $attribute->value );
+			$raw = $this->VariableCleanup( $attribute->value );
 
 			if( empty( $raw ) )
 			{
@@ -363,7 +363,7 @@ class Compiler
 		{
 			$node->removeAttributeNode( $attribute );
 
-			$raw = \trim( $attribute->value );
+			$raw = $this->VariableCleanup( $attribute->value );
 
 			if( empty( $raw ) )
 			{
@@ -420,12 +420,14 @@ class Compiler
 		{
 			$node->removeAttributeNode( $attribute );
 
-			if( empty( $attribute->value ) )
+			$raw = $this->VariableCleanup( $attribute->value );
+
+			if( empty( $raw ) )
 			{
 				throw new SyntaxError( "Attribute $attribute->name must not be empty", $node->getLineNo() );
 			}
 
-			$this->ValidateExpression( "foreach($attribute->value)", self::ATTR_FOR, $node->getLineNo() );
+			$this->ValidateExpression( "foreach($raw)", self::ATTR_FOR, $node->getLineNo() );
 
 			$newNodeFor = $this->DOM->createElement( $this->expressionTag );
 			$newNodeFor->setAttribute( 'c', (string)$this->expressionCount );
@@ -443,7 +445,7 @@ class Compiler
 
 			$newNodeFor->appendChild( $node );
 
-			$this->expressions[ $this->expressionCount ] = "foreach($attribute->value){";
+			$this->expressions[ $this->expressionCount ] = "foreach($raw){";
 			$this->expressionCount++;
 		}
 
@@ -462,7 +464,7 @@ class Compiler
 				continue;
 			}
 
-			$raw = \trim( $attribute->value );
+			$raw = $this->VariableCleanup( $attribute->value );
 			$tokens = $this->ValidateExpression( $raw, null, $node->getLineNo() );
 
 			if( empty( $tokens ) )
@@ -592,7 +594,7 @@ class Compiler
 			$raw = \substr( $mustache, 2, -2 );
 		}
 
-		$raw = \trim( $raw );
+		$raw = $this->VariableCleanup( $raw );
 
 		$tokens = $this->ValidateExpression( $raw, self::ATTR_MUSTACHE_TAG, $node->getLineNo() );
 
@@ -636,6 +638,52 @@ class Compiler
 		{
 			$this->HandleMustacheVariables( $remainder );
 		}
+	}
+
+	private function VariableCleanup( string $raw ) : string
+	{
+		$raw = \trim( $raw );
+		$raw = $this->VariableReplace( $raw );
+
+		return $raw;
+	}
+
+	private function VariableReplace( string $html ) : string
+	{
+		// if it is a variable
+		if( \preg_match_all( '/(\$[a-z_A-Z][^\s]*)/', $html, $matches ) )
+		{
+			$count = \count( $matches[ 1 ] );
+
+			// substitute . and [] with [" "]
+			for( $i = 0; $i < $count; $i++ )
+			{
+				$rep = $matches[ 1 ][ $i ];
+
+				// .$var
+				$rep = \preg_replace( '/\.(\$[a-zA-Z_0-9]*(?![a-zA-Z_0-9]*(\'|\")))/', '[$1]', $rep );
+
+				// .var
+				$rep = \preg_replace_callback( '/\.([a-zA-Z_0-9]*(?![a-zA-Z_0-9]*(\'|\")))/', static function( array $Matches ) : string
+				{
+					if( preg_match( '/^[0-9]+$/', $Matches[ 1 ] ) === 1 )
+					{
+						return '[' . $Matches[ 1 ] . ']';
+					}
+
+					return "['" . $Matches[ 1 ] . "']";
+				}, $rep );
+
+				$pos = \strpos( $html, $matches[ 0 ][ $i ] );
+
+				if( $pos !== false )
+				{
+					$html = \substr_replace( $html, $rep, $pos, \strlen( $matches[ 0 ][ $i ] ) );
+				}
+			}
+		}
+
+		return $html;
 	}
 
 	/**
